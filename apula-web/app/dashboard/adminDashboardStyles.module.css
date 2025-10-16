@@ -1,0 +1,235 @@
+.container {
+  padding: 24px;
+  background-color: #d9d9d9;
+  min-height: 100vh;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+.contentSection {
+  background-color: white;
+  padding: 24px;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.pageTitle {
+  color: var(--color-red);
+  font-size: 24px;
+  font-weight: 700;
+  margin: 0;
+}
+
+.separator {
+  margin-top: 0.5rem;
+  margin-bottom: 1.5rem;
+  border: 0;
+  border-top: 1px solid #ccc;
+}
+
+/* HEADER ROW */
+.headerRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+/* ---------- FIRST ROW ---------- */
+.topRow {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+
+.cardTime,
+.cardTemperature {
+  flex: 1 1 300px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  color: white;
+  height: 110px;
+  position: relative;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+/* TIME CARD */
+.cardTime {
+  background: linear-gradient(135deg, #f3ae2f, #e47119);
+  position: relative;
+  overflow: hidden;
+}
+
+.timeIcon {
+  position: absolute;
+  left: 25px;
+  font-size: 65px;
+  opacity: 0.9;
+}
+
+.timeInfo {
+  text-align: center;
+}
+
+.timeText {
+  font-size: 32px;
+  font-weight: 700;
+  margin: 0;
+}
+
+.dateText {
+  font-size: 16px;
+  font-weight: 500;
+  margin: 5px 0 0;
+}
+
+/* TEMPERATURE CARD */
+.cardTemperature {
+  flex-direction: column;
+  justify-content: center;
+  text-align: center;
+}
+
+.hotTemp {
+  background: linear-gradient(135deg, #ff8c00, #ff4500);
+}
+
+.coolTemp {
+  background: linear-gradient(135deg, #01558e, #85c1e9);
+}
+
+.tempValue {
+  font-size: 36px;
+  font-weight: 700;
+  margin: 0;
+}
+
+.tempStatus {
+  font-size: 14px;
+  font-weight: 500;
+  opacity: 0.9;
+  margin-top: 5px;
+}
+
+/* ---------- SECOND ROW (SUMMARY DATA) ---------- */
+.summaryRow {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+/* Base style for all summary cards */
+.summaryCard {
+  flex: 1 1 300px;
+  border-radius: 12px;
+  padding: 24px;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  transition: color 0.4s ease;
+  z-index: 1;
+}
+
+/* ::before for sliding background */
+.summaryCard::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  transition: all 0.5s ease;
+  z-index: 0;
+}
+
+/* ensure content above bg */
+.summaryCard * {
+  position: relative;
+  z-index: 2;
+}
+
+/* ---- DEFAULT COLORS ---- */
+.usersCard {
+  background: #fff3e0;
+  color: #e65100;
+}
+
+.respondersCard {
+  background: #e8f5e9;
+  color: #1b5e20;
+}
+
+.callsCard {
+  background: #f3e5f5;
+  color: #6a1b9a;
+}
+
+/* ---- SLIDING HOVER ANIMATION ---- */
+.usersCard::before {
+  background: linear-gradient(135deg, #ffb347, #ff9800);
+}
+
+.respondersCard::before {
+  background: linear-gradient(135deg, #2ecc71, #27ae60);
+}
+
+.callsCard::before {
+  background: linear-gradient(135deg, #9b59b6, #8e44ad);
+}
+
+.summaryCard:hover::before {
+  left: 0;
+}
+
+.summaryCard:hover {
+  color: white;
+}
+
+/* HEADINGS */
+.summaryCard h4 {
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.summaryValue {
+  font-size: 28px;
+  font-weight: 700;
+}
+
+/* ---------- RESPONSIVE ---------- */
+@media (max-width: 768px) {
+  .topRow,
+  .summaryRow {
+    flex-direction: column;
+  }
+
+  .cardTime,
+  .cardTemperature {
+    flex: 1 1 100%;
+    height: 90px;
+  }
+
+  .timeIcon {
+    display: none;
+  }
+
+  .timeText {
+    font-size: 26px;
+  }
+
+  .dateText {
+    font-size: 14px;
+  }
+
+  .tempValue {
+    font-size: 28px;
+  }
+
+  .summaryCard {
+    flex: 1 1 100%;
+  }
+}
