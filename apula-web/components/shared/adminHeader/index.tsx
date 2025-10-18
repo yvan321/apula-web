@@ -8,6 +8,7 @@ import {
   LayoutDashboard,
   Users,
   UserCheck,
+  Bell,
   FileText,
   BarChart,
   Settings,
@@ -51,6 +52,16 @@ export default function AdminHeader() {
           >
             <LayoutDashboard size={18} className={styles.icon} />
             <span>Dashboard</span>
+          </a>
+
+          <a
+            href="/dashboard/notifications"
+            className={`${styles.sidebarLink} ${
+              isActive("/dashboard/notifications") ? styles.activeLink : ""
+            }`}
+          >
+            <Bell  size={18} className={styles.icon} />
+            <span>Notifications</span>
           </a>
 
           <a

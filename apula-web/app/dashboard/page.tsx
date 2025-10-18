@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import AdminHeader from "@/components/shared/adminHeader";
 import styles from "./adminDashboardStyles.module.css";
 import { FaRegClock } from "react-icons/fa";
+import DebugAlertButton from "@/components/shared/DebugAlertButton";
 
 const AdminDashboard = () => {
   const [time, setTime] = useState("");
@@ -42,10 +43,11 @@ const AdminDashboard = () => {
     <div>
       <AdminHeader />
       <div className={styles.container}>
+         <DebugAlertButton />
         <div data-aos="fade-up" className={styles.contentSection}>
           {/* Header */}
           <div className={styles.headerRow}>
-            <h2 className={styles.pageTitle}>Dashboard</h2>
+            <h2 className={styles.pageTitle}>Admin Dashboard</h2>
           </div>
           <hr className={styles.separator} />
 
@@ -72,16 +74,25 @@ const AdminDashboard = () => {
           {/* --- 2nd Row: Summary Data --- */}
           <div className={styles.summaryRow}>
             <div className={`${styles.summaryCard} ${styles.usersCard}`}>
-              <h4>Number of Users</h4>
+              <h4>Registered Users</h4>
               <p className={styles.summaryValue}>24</p>
+              <p className={styles.summaryLabel}>App users & responders</p>
             </div>
+
             <div className={`${styles.summaryCard} ${styles.respondersCard}`}>
-              <h4>Available Responders</h4>
-              <p className={styles.summaryValue}>8</p>
+              <h4>Active Alerts</h4>
+              <p className={styles.summaryValue}>3</p>
+              <p className={styles.summaryLabel}>
+                Real-time fire detections from Apula app
+              </p>
             </div>
+
             <div className={`${styles.summaryCard} ${styles.callsCard}`}>
-              <h4>Calls Received</h4>
+              <h4>Resolved Incidents</h4>
               <p className={styles.summaryValue}>15</p>
+              <p className={styles.summaryLabel}>
+                Verified and documented fire events
+              </p>
             </div>
           </div>
         </div>

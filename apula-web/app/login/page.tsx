@@ -69,7 +69,7 @@ export default function Login() {
 
             <p className={styles.signupText}>
               Don’t have an account?{" "}
-              <a href="/register" className={styles.signupLink}>
+              <a href="/signup" className={styles.signupLink}>
                 Sign up
               </a>
             </p>
