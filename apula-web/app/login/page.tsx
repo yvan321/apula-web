@@ -3,6 +3,8 @@ import React, { useState } from "react";
 import styles from "./loginstyles.module.css";
 import Image from "next/image";
 import logo from "../../assets/fireapula.png";
+import { signInWithEmailAndPassword } from "firebase/auth";
+import { auth } from "../../lib/firebase";
 
 export default function Login() {
   const [username, setUsername] = useState("");
@@ -10,7 +12,7 @@ export default function Login() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const handleLogin = async (e: { preventDefault: () => void; }) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
 
@@ -20,16 +22,18 @@ export default function Login() {
     }
 
     setLoading(true);
-
-    setTimeout(() => {
+    try {
+      const userCredential = await signInWithEmailAndPassword(auth, username, password);
+      const user = userCredential.user;
+      console.log("Logged in:", user.email);
+      alert("Login successful!");
+      window.location.href = "/dashboard";
+    } catch (err: any) {
+      console.error(err);
+      setError("Invalid email or password.");
+    } finally {
       setLoading(false);
-      if (username === "admin" && password === "1234") {
-        alert("Login successful!");
-        window.location.href = "/dashboard";
-      } else {
-        setError("Invalid username or password.");
-      }
-    }, 1000);
+    }
   };
 
   return (
@@ -46,7 +50,7 @@ export default function Login() {
             <form onSubmit={handleLogin}>
               <input
                 className={styles.input}
-                placeholder="Enter username"
+                placeholder="Enter email"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
               />

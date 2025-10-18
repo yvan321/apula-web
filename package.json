@@ -1,0 +1,9 @@
+{
+  "dependencies": {
+    "firebase": "^12.4.0",
+    "nodemailer": "^7.0.9"
+  },
+  "devDependencies": {
+    "@types/nodemailer": "^7.0.2"
+  }
+}

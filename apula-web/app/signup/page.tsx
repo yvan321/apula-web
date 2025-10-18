@@ -3,6 +3,10 @@ import React, { useState } from "react";
 import styles from "./signupStyles.module.css";
 import Image from "next/image";
 import logo from "../../assets/fireapula.png";
+import { createUserWithEmailAndPassword } from "firebase/auth";
+import { doc, setDoc } from "firebase/firestore";
+import { auth, db } from "@/lib/firebase";
+
 
 export default function Signup() {
   const [step, setStep] = useState(1);
@@ -19,38 +23,60 @@ export default function Signup() {
   const [error, setError] = useState("");
 
   // ✅ Step 1: Email submission
-  const handleEmailSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!email) return setError("Please enter your email.");
-    if (!email.endsWith("@gmail.com"))
-      return setError("Email must be a Gmail address (e.g., user@gmail.com).");
+const handleEmailSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
 
-    setError("");
-    setLoading(true);
+  if (!email) return setError("Please enter your email.");
+  if (!email.endsWith("@gmail.com"))
+    return setError("Email must be a Gmail address.");
 
-    // Simulate sending OTP
-    setTimeout(() => {
-      setLoading(false);
-      setStep(2);
-    }, 1000);
-  };
+  setError("");
+  setLoading(true);
+
+  try {
+    const res = await fetch("/api/send-otp", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email }),
+    });
+
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Failed to send OTP");
+
+    setStep(2);
+  } catch (err: any) {
+    setError(err.message);
+  } finally {
+    setLoading(false);
+  }
+}
 
   // ✅ Step 2: OTP verification
-  const handleOtpSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!otp) return setError("Please enter the OTP.");
-    setError("");
-    setLoading(true);
+  const handleOtpSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
 
-    setTimeout(() => {
-      setLoading(false);
-      if (otp === "123456") {
-        setStep(3);
-      } else {
-        setError("Invalid OTP. Please try again.");
-      }
-    }, 1000);
-  };
+  if (!otp) return setError("Please enter the OTP.");
+  setError("");
+  setLoading(true);
+
+  try {
+    const res = await fetch("/api/verify-otp", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, otp }),
+    });
+
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Invalid OTP");
+
+    setStep(3);
+  } catch (err: any) {
+    setError(err.message);
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   // ✅ Step 3: Password setup
   const handlePasswordSubmit = (e: React.FormEvent) => {
@@ -71,23 +97,43 @@ export default function Signup() {
     }, 800);
   };
 
-  // ✅ Step 4: Final registration
-  const handleFinalSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const { name, contact, address } = details;
 
-    if (!name || !contact || !address) {
-      return setError("Please fill in all fields.");
-    }
+ // ✅ Step 4: Final registration (with Firebase)
+const handleFinalSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  const { name, contact, address, password } = details;
 
-    setError("");
-    setLoading(true);
+  if (!name || !contact || !address) {
+    return setError("Please fill in all fields.");
+  }
 
-    setTimeout(() => {
-      setLoading(false);
-      window.location.href = "/login"; // Redirect to login page
-    }, 1000);
-  };
+  setError("");
+  setLoading(true);
+
+  try {
+    // 1️⃣ Create user in Firebase Auth
+    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+    const user = userCredential.user;
+
+    // 2️⃣ Store extra user details in Firestore
+    await setDoc(doc(db, "users", user.uid), {
+      email,
+      name,
+      contact,
+      address,
+      role: "user", // you can change this later for responders/admins
+      createdAt: new Date(),
+    });
+
+    alert("Account created successfully!");
+    window.location.href = "/login";
+  } catch (err: any) {
+    console.error(err);
+    setError(err.message || "Failed to register. Try again.");
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <div className={styles.bgContainer}>
