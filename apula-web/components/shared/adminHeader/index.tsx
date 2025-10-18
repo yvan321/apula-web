@@ -95,9 +95,9 @@ export default function AdminHeader() {
           </a>
 
           <a
-            href="/analytics"
+            href="/dashboard/analytics"
             className={`${styles.sidebarLink} ${
-              isActive("/analytics") ? styles.activeLink : ""
+              isActive("/dashboard/analytics") ? styles.activeLink : ""
             }`}
           >
             <BarChart size={18} className={styles.icon} />
@@ -105,9 +105,9 @@ export default function AdminHeader() {
           </a>
 
           <a
-            href="/settings"
+            href="/dashboard/settings"
             className={`${styles.sidebarLink} ${
-              isActive("/settings") ? styles.activeLink : ""
+              isActive("/dashboard/settings") ? styles.activeLink : ""
             }`}
           >
             <Settings size={18} className={styles.icon} />

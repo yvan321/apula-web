@@ -6,7 +6,9 @@ import logo from "../../assets/fireapula.png";
 import { createUserWithEmailAndPassword } from "firebase/auth";
 import { doc, setDoc } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
-
+import { FaChevronLeft } from "react-icons/fa";
+import { ToastContainer, toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 export default function Signup() {
   const [step, setStep] = useState(1);
@@ -23,60 +25,59 @@ export default function Signup() {
   const [error, setError] = useState("");
 
   // ✅ Step 1: Email submission
-const handleEmailSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
+  const handleEmailSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
 
-  if (!email) return setError("Please enter your email.");
-  if (!email.endsWith("@gmail.com"))
-    return setError("Email must be a Gmail address.");
+    if (!email) return setError("Please enter your email.");
+    if (!email.endsWith("@gmail.com"))
+      return setError("Email must be a Gmail address.");
 
-  setError("");
-  setLoading(true);
+    setError("");
+    setLoading(true);
 
-  try {
-    const res = await fetch("/api/send-otp", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email }),
-    });
+    try {
+      const res = await fetch("/api/send-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
 
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || "Failed to send OTP");
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to send OTP");
 
-    setStep(2);
-  } catch (err: any) {
-    setError(err.message);
-  } finally {
-    setLoading(false);
-  }
-}
+      setStep(2);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // ✅ Step 2: OTP verification
   const handleOtpSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
+    e.preventDefault();
 
-  if (!otp) return setError("Please enter the OTP.");
-  setError("");
-  setLoading(true);
+    if (!otp) return setError("Please enter the OTP.");
+    setError("");
+    setLoading(true);
 
-  try {
-    const res = await fetch("/api/verify-otp", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, otp }),
-    });
+    try {
+      const res = await fetch("/api/verify-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, otp }),
+      });
 
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || "Invalid OTP");
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Invalid OTP");
 
-    setStep(3);
-  } catch (err: any) {
-    setError(err.message);
-  } finally {
-    setLoading(false);
-  }
-};
-
+      setStep(3);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // ✅ Step 3: Password setup
   const handlePasswordSubmit = (e: React.FormEvent) => {
@@ -97,43 +98,56 @@ const handleEmailSubmit = async (e: React.FormEvent) => {
     }, 800);
   };
 
+  // ✅ Step 4: Final registration (with Firebase)
+  const handleFinalSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const { name, contact, address, password } = details;
 
- // ✅ Step 4: Final registration (with Firebase)
-const handleFinalSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
-  const { name, contact, address, password } = details;
+    if (!name || !contact || !address) {
+      return setError("Please fill in all fields.");
+    }
 
-  if (!name || !contact || !address) {
-    return setError("Please fill in all fields.");
-  }
+    setError("");
+    setLoading(true);
 
-  setError("");
-  setLoading(true);
+    try {
+      // 1️⃣ Create user in Firebase Auth
+      const userCredential = await createUserWithEmailAndPassword(
+        auth,
+        email,
+        password
+      );
+      const user = userCredential.user;
 
-  try {
-    // 1️⃣ Create user in Firebase Auth
-    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-    const user = userCredential.user;
+      // 2️⃣ Store extra user details in Firestore
+      await setDoc(doc(db, "users", user.uid), {
+        email,
+        name,
+        contact,
+        address,
+        role: "Admin", // you can change this later for responders/admins
+        createdAt: new Date(),
+      });
 
-    // 2️⃣ Store extra user details in Firestore
-    await setDoc(doc(db, "users", user.uid), {
-      email,
-      name,
-      contact,
-      address,
-      role: "Admin", // you can change this later for responders/admins
-      createdAt: new Date(),
-    });
+      toast.success("Account created successfully!", {
+        position: "top-center",
+        autoClose: 3000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        progress: undefined,
+        theme: "light",
+      });
 
-    alert("Account created successfully!");
-    window.location.href = "/login";
-  } catch (err: any) {
-    console.error(err);
-    setError(err.message || "Failed to register. Try again.");
-  } finally {
-    setLoading(false);
-  }
-};
+      window.location.href = "/login";
+    } catch (err: any) {
+      console.error(err);
+      setError(err.message || "Failed to register. Try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className={styles.bgContainer}>
@@ -147,6 +161,17 @@ const handleFinalSubmit = async (e: React.FormEvent) => {
         {/* ✅ Right Side */}
         <div className={styles.rightContainer}>
           <div className={styles.card}>
+            {step > 1 && (
+              <button
+                type="button"
+                className={styles.backButton}
+                onClick={() => setStep(step - 1)}
+                aria-label="Go back"
+              >
+                <FaChevronLeft size={18} />
+              </button>
+            )}
+
             {/* Step 1: Email */}
             {step === 1 && (
               <form onSubmit={handleEmailSubmit}>
@@ -159,7 +184,11 @@ const handleFinalSubmit = async (e: React.FormEvent) => {
                   onChange={(e) => setEmail(e.target.value)}
                 />
                 {error && <p className={styles.error}>{error}</p>}
-                <button type="submit" className={styles.button} disabled={loading}>
+                <button
+                  type="submit"
+                  className={styles.button}
+                  disabled={loading}
+                >
                   {loading ? "Sending OTP..." : "Send OTP"}
                 </button>
               </form>
@@ -181,7 +210,11 @@ const handleFinalSubmit = async (e: React.FormEvent) => {
                   onChange={(e) => setOtp(e.target.value)}
                 />
                 {error && <p className={styles.error}>{error}</p>}
-                <button type="submit" className={styles.button} disabled={loading}>
+                <button
+                  type="submit"
+                  className={styles.button}
+                  disabled={loading}
+                >
                   {loading ? "Verifying..." : "Verify OTP"}
                 </button>
               </form>
@@ -210,7 +243,11 @@ const handleFinalSubmit = async (e: React.FormEvent) => {
                   }
                 />
                 {error && <p className={styles.error}>{error}</p>}
-                <button type="submit" className={styles.button} disabled={loading}>
+                <button
+                  type="submit"
+                  className={styles.button}
+                  disabled={loading}
+                >
                   {loading ? "Checking..." : "Next"}
                 </button>
               </form>
@@ -248,7 +285,11 @@ const handleFinalSubmit = async (e: React.FormEvent) => {
                   }
                 />
                 {error && <p className={styles.error}>{error}</p>}
-                <button type="submit" className={styles.button} disabled={loading}>
+                <button
+                  type="submit"
+                  className={styles.button}
+                  disabled={loading}
+                >
                   {loading ? "Registering..." : "Register"}
                 </button>
               </form>
@@ -264,6 +305,7 @@ const handleFinalSubmit = async (e: React.FormEvent) => {
           </div>
         </div>
       </div>
+      <ToastContainer />
     </div>
   );
 }

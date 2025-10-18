@@ -5,6 +5,8 @@ import Image from "next/image";
 import logo from "../../assets/fireapula.png";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { auth } from "../../lib/firebase";
+import { ToastContainer, toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 export default function Login() {
   const [username, setUsername] = useState("");
@@ -23,10 +25,24 @@ export default function Login() {
 
     setLoading(true);
     try {
-      const userCredential = await signInWithEmailAndPassword(auth, username, password);
+      const userCredential = await signInWithEmailAndPassword(
+        auth,
+        username,
+        password
+      );
       const user = userCredential.user;
       console.log("Logged in:", user.email);
-      alert("Login successful!");
+      toast.success("Login successful!", {
+        position: "top-center",
+        autoClose: 3000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        progress: undefined,
+        theme: "light",
+      });
+
       window.location.href = "/dashboard";
     } catch (err: any) {
       console.error(err);
@@ -80,6 +96,7 @@ export default function Login() {
           </div>
         </div>
       </div>
+      <ToastContainer />
     </div>
   );
 }
