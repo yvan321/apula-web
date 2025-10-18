@@ -1,60 +1,94 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import AdminHeader from "@/components/shared/adminHeader";
 import styles from "./userpagestyles.module.css";
 import { FaUsers, FaUserShield, FaUserTie, FaUser, FaSearch } from "react-icons/fa";
+import { collection, getDocs } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 
-const UsersPage = () => {
+type User = {
+  id: string;
+  name?: string;
+  role?: string;
+  department?: string;
+  contact?: string;
+  address?: string;
+  email?: string;
+  // createdAt might be a Firestore Timestamp or a plain string
+  createdAt?: any;
+  created_time?: string; // in case you used that key previously
+};
+
+export default function UsersPage() {
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedRole, setSelectedRole] = useState("All");
-  const [selectedUser, setSelectedUser] = useState(null); // ✅ For popup modal
+  const [selectedRole, setSelectedRole] = useState("All"); // keep original "All" label
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [users, setUsers] = useState<User[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const users = [
-    {
-      id: 1,
-      name: "Isaac Newbie",
-      role: "Responder",
-      department: "Fire Department",
-      contact: "09171234567",
-      address: "Bacoor City, Cavite",
-      email: "isaacnewbie@gmail.com",
-      created_time: "2025-01-10 14:23",
-    },
-    {
-      id: 2,
-      name: "LeBron James",
-      role: "Admin",
-      department: "Fire Department",
-      contact: "09181234567",
-      address: "Imus City, Cavite",
-      email: "lebronjames@gmail.com",
-      created_time: "2025-02-05 09:45",
-    },
-    {
-      id: 3,
-      name: "Neil Armstrong",
-      role: "User",
-      department: "Support",
-      contact: "09991234567",
-      address: "Dasmariñas, Cavite",
-      email: "neilarmstrong@gmail.com",
-      created_time: "2025-03-02 11:30",
-    },
-  ];
+  useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        const snap = await getDocs(collection(db, "users"));
+        const list = snap.docs.map((d) => ({ id: d.id, ...d.data() })) as User[];
+        setUsers(list);
+      } catch (err) {
+        console.error("Error fetching users:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  // ✅ Filter by role & search
-  const filteredUsers = users.filter(
-    (user) =>
-      (selectedRole === "All" || user.role === selectedRole) &&
-      (user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        user.role.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        user.department.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
+    fetchUsers();
+  }, []);
 
-  // ✅ Open/close modal
-  const openModal = (user) => setSelectedUser(user);
+  // normalize role for comparisons (handles "admin" & "Admin")
+  const norm = (r?: string) => (r ? r.toString().toLowerCase() : "");
+
+  // counts for cards (case-insensitive)
+  const totalAll = users.length;
+  const totalAdmins = users.filter((u) => norm(u.role) === "admin").length;
+  const totalResponders = users.filter((u) => norm(u.role) === "responder").length;
+  const totalUsers = users.filter((u) => norm(u.role) === "user").length;
+
+  // filter logic: preserve original behavior (selectedRole uses capitalized labels)
+  const roleMatches = (user: User) => {
+    if (selectedRole === "All") return true;
+    return norm(user.role) === selectedRole.toLowerCase();
+  };
+
+  const matchesSearch = (user: User) => {
+    const q = searchTerm.trim().toLowerCase();
+    if (!q) return true;
+    return (
+      (user.name || "").toLowerCase().includes(q) ||
+      (user.role || "").toLowerCase().includes(q) ||
+      (user.department || "").toLowerCase().includes(q) ||
+      (user.email || "").toLowerCase().includes(q)
+    );
+  };
+
+  const filteredUsers = users.filter((u) => roleMatches(u) && matchesSearch(u));
+
+  const openModal = (user: User) => setSelectedUser(user);
   const closeModal = () => setSelectedUser(null);
+
+  // Format Firestore Timestamp -> readable string
+  const formatCreatedAt = (createdAt: any, created_time?: string) => {
+    if (!createdAt && created_time) return created_time;
+    if (!createdAt) return "N/A";
+    // Firestore Timestamp has seconds/nanoseconds
+    if (createdAt.seconds) {
+      return new Date(createdAt.seconds * 1000).toLocaleString();
+    }
+    // if it's already a Date or string
+    try {
+      const d = new Date(createdAt);
+      if (!isNaN(d.getTime())) return d.toLocaleString();
+    } catch {}
+    return String(createdAt);
+  };
 
   return (
     <div>
@@ -79,7 +113,7 @@ const UsersPage = () => {
               <FaUsers className={styles.summaryIcon} />
               <div className={styles.summaryText}>
                 <h4>All</h4>
-                <p>24</p>
+                <p>{totalAll}</p>
               </div>
             </div>
 
@@ -92,7 +126,7 @@ const UsersPage = () => {
               <FaUserShield className={styles.summaryIcon} />
               <div className={styles.summaryText}>
                 <h4>Admin</h4>
-                <p>5</p>
+                <p>{totalAdmins}</p>
               </div>
             </div>
 
@@ -105,7 +139,7 @@ const UsersPage = () => {
               <FaUserTie className={styles.summaryIcon} />
               <div className={styles.summaryText}>
                 <h4>Responder</h4>
-                <p>8</p>
+                <p>{totalResponders}</p>
               </div>
             </div>
 
@@ -118,7 +152,7 @@ const UsersPage = () => {
               <FaUser className={styles.summaryIcon} />
               <div className={styles.summaryText}>
                 <h4>User</h4>
-                <p>11</p>
+                <p>{totalUsers}</p>
               </div>
             </div>
           </div>
@@ -149,18 +183,21 @@ const UsersPage = () => {
                 </tr>
               </thead>
               <tbody>
-                {filteredUsers.length > 0 ? (
+                {loading ? (
+                  <tr>
+                    <td colSpan={5} className={styles.noResults}>
+                      Loading...
+                    </td>
+                  </tr>
+                ) : filteredUsers.length > 0 ? (
                   filteredUsers.map((user) => (
                     <tr key={user.id}>
                       <td data-label="ID">{user.id}</td>
-                      <td data-label="Name">{user.name}</td>
-                      <td data-label="Role">{user.role}</td>
-                      <td data-label="Department">{user.department}</td>
+                      <td data-label="Name">{user.name ?? "N/A"}</td>
+                      <td data-label="Role">{user.role ?? "N/A"}</td>
+                      <td data-label="Department">{user.department ?? "N/A"}</td>
                       <td data-label="Actions">
-                        <button
-                          className={styles.viewBtn}
-                          onClick={() => openModal(user)}
-                        >
+                        <button className={styles.viewBtn} onClick={() => openModal(user)}>
                           View
                         </button>
                         <button className={styles.editBtn}>Edit</button>
@@ -169,7 +206,7 @@ const UsersPage = () => {
                   ))
                 ) : (
                   <tr>
-                    <td colSpan="5" className={styles.noResults}>
+                    <td colSpan={5} className={styles.noResults}>
                       No users found.
                     </td>
                   </tr>
@@ -180,21 +217,21 @@ const UsersPage = () => {
         </div>
       </div>
 
-      {/* ✅ Popup Modal */}
+      {/* Popup Modal */}
       {selectedUser && (
         <div className={styles.modalOverlay} onClick={closeModal}>
-          <div
-            className={styles.modalContent}
-            onClick={(e) => e.stopPropagation()}
-          >
+          <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
             <h3 className={styles.modalTitle}>User Information</h3>
             <div className={styles.modalDetails}>
-              <p><strong>Name:</strong> {selectedUser.name}</p>
-              <p><strong>Role:</strong> {selectedUser.role}</p>
-              <p><strong>Contact:</strong> {selectedUser.contact}</p>
-              <p><strong>Address:</strong> {selectedUser.address}</p>
-              <p><strong>Email:</strong> {selectedUser.email}</p>
-              <p><strong>Created Time:</strong> {selectedUser.created_time}</p>
+              <p><strong>Name:</strong> {selectedUser.name ?? "N/A"}</p>
+              <p><strong>Role:</strong> {selectedUser.role ?? "N/A"}</p>
+              <p><strong>Contact:</strong> {selectedUser.contact ?? "N/A"}</p>
+              <p><strong>Address:</strong> {selectedUser.address ?? "N/A"}</p>
+              <p><strong>Email:</strong> {selectedUser.email ?? "N/A"}</p>
+              <p>
+                <strong>Created Time:</strong>{" "}
+                {formatCreatedAt(selectedUser.createdAt, selectedUser.created_time)}
+              </p>
             </div>
             <button className={styles.closeBtn} onClick={closeModal}>
               Close
@@ -204,6 +241,4 @@ const UsersPage = () => {
       )}
     </div>
   );
-};
-
-export default UsersPage;
+}

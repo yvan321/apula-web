@@ -121,7 +121,7 @@ const handleFinalSubmit = async (e: React.FormEvent) => {
       name,
       contact,
       address,
-      role: "user", // you can change this later for responders/admins
+      role: "Admin", // you can change this later for responders/admins
       createdAt: new Date(),
     });
 
