@@ -8,6 +8,7 @@ import {
   LayoutDashboard,
   Users,
   UserCheck,
+
   Bell,
   FileText,
   BarChart,
@@ -27,7 +28,6 @@ export default function AdminHeader() {
   const isActive = (path) => pathname === path;
 
   const handleLogout = () => {
-    
     window.location.href = "/login";
   };
 
@@ -60,7 +60,7 @@ export default function AdminHeader() {
               isActive("/dashboard/notifications") ? styles.activeLink : ""
             }`}
           >
-            <Bell  size={18} className={styles.icon} />
+            <Bell size={18} className={styles.icon} />
             <span>Notifications</span>
           </a>
 
@@ -72,6 +72,16 @@ export default function AdminHeader() {
           >
             <Users size={18} className={styles.icon} />
             <span>Users</span>
+          </a>
+
+          <a
+            href="/dashboard/ResponderRequest"
+            className={`${styles.sidebarLink} ${
+              isActive("/dashboard/ResponderRequest") ? styles.activeLink : ""
+            }`}
+          >
+            <UserCheck size={18} className={styles.icon} />
+            <span>Responders</span>
           </a>
 
           <a
@@ -106,7 +116,7 @@ export default function AdminHeader() {
         </nav>
 
         <button className={styles.logoutLink}>
-          <LogOut size={18} className={styles.icon} onClick={handleLogout}/>
+          <LogOut size={18} className={styles.icon} onClick={handleLogout} />
           Logout
         </button>
       </aside>

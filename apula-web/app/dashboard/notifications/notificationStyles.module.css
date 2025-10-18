@@ -25,42 +25,68 @@
   border-top: 1px solid #ccc;
 }
 
-/* Notification Cards */
+/* ---------- FILTER BUTTONS ---------- */
+.filterContainer {
+  display: flex;
+  gap: 10px;
+}
+
+.filterBtn {
+  background: #f0f0f0;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background 0.3s;
+}
+
+.filterBtn:hover {
+  background: #e2e2e2;
+}
+
+.activeFilter {
+  background: #ff4d4f;
+  color: white;
+}
+
+/* ---------- NOTIFICATION LIST ---------- */
 .notificationList {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
 }
 
 .notificationCard {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
+  align-items: center;
   background: #ffffff;
-  border-radius: 10px;
-  padding: 16px;
+  border-radius: 8px;
+  padding: 10px 14px;
   cursor: pointer;
   transition: all 0.3s ease;
-  border-left: 6px solid transparent;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+  border-left: 5px solid transparent;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  min-height: 70px;
 }
 
 .notificationCard:hover {
-  transform: translateY(-3px);
+  transform: translateY(-2px);
 }
 
-/* Unread = highlighted */
+/* Unread and Read states */
 .unread {
   border-left-color: #ff4d4f;
-  background: #fff3f3;
+  background: #fff5f5;
 }
 
-/* Read = normal */
 .read {
-  opacity: 0.8;
+  background: #f8f8f8;
+  opacity: 0.85;
 }
 
-/* Pending & Resolved background hint */
+/* Pending & Resolved */
 .pending {
   border-left-color: #e74c3c;
 }
@@ -69,10 +95,22 @@
   border-left-color: #27ae60;
 }
 
-.statusBadge {
-  padding: 4px 10px;
-  border-radius: 8px;
+.notifInfo h4 {
+  font-size: 16px;
+  margin: 0 0 4px 0;
+  color: #333;
+}
+
+.notifInfo p {
   font-size: 13px;
+  margin: 2px 0;
+  color: #444;
+}
+
+.statusBadge {
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 12px;
   font-weight: 600;
   text-transform: uppercase;
 }
@@ -85,6 +123,16 @@
 .statusResolved {
   background: #e8f5e9;
   color: #1b5e20;
+}
+
+/* ---------- UNREAD DOT ---------- */
+.unreadDot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  background: #ff4d4f;
+  border-radius: 50%;
+  margin-left: 6px;
 }
 
 /* ---------- MODAL ---------- */
@@ -106,7 +154,7 @@
   padding: 24px;
   border-radius: 12px;
   width: 90%;
-  max-width: 420px;
+  max-width: 400px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
   text-align: left;
   animation: fadeIn 0.3s ease;
@@ -120,6 +168,7 @@
 
 .modalContent p {
   margin: 6px 0;
+  font-size: 14px;
 }
 
 .desc {
@@ -127,7 +176,8 @@
   background: #f9f9f9;
   padding: 10px;
   border-radius: 8px;
-  font-size: 14px;
+  font-size: 13px;
+  line-height: 1.4;
 }
 
 .closeBtn {
@@ -140,6 +190,7 @@
   cursor: pointer;
   font-weight: 600;
   transition: 0.3s;
+  width: 100%;
 }
 
 .closeBtn:hover {
@@ -154,5 +205,19 @@
   to {
     opacity: 1;
     transform: scale(1);
+  }
+}
+
+/* ---------- RESPONSIVE ---------- */
+@media (max-width: 600px) {
+  .notificationCard {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 12px;
+  }
+
+  .statusBadge {
+    align-self: flex-end;
+    margin-top: 6px;
   }
 }

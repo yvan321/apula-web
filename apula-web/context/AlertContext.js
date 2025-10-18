@@ -11,7 +11,7 @@ export const AlertProvider = ({ children }) => {
   const [alertMessage, setAlertMessage] = useState("");
 
   const alarmSound = new Howl({
-    src: ["/sounds/alarm.mp3"], // 📂 place your alarm.mp3 in /public/sounds/
+    src: ["/sounds/fire_alarm.mp3"], // 📂 place your alarm.mp3 in /public/sounds/
     volume: 0.7,
   });
 
@@ -30,43 +30,72 @@ export const AlertProvider = ({ children }) => {
   return (
     <AlertContext.Provider value={{ triggerAlert }}>
       {children}
+
       {isAlertVisible && (
         <div className="alertPopup">
           <div className="alertContent">
-            <h3>🚨 Fire Alert Detected!</h3>
+            <h1>🚨 FIRE ALERT DETECTED!</h1>
             <p>{alertMessage}</p>
           </div>
         </div>
       )}
+
       <style jsx>{`
         .alertPopup {
           position: fixed;
-          top: 20px;
-          right: 20px;
+          top: 0;
+          left: 0;
+          width: 100vw;
+          height: 100vh;
+          background: rgba(0, 0, 0, 0.6);
+          display: flex;
+          align-items: center;
+          justify-content: center;
           z-index: 9999;
+          animation: fadeIn 0.3s ease-in-out;
+        }
+
+        .alertContent {
           background: #ff4d4f;
           color: white;
-          padding: 16px 20px;
-          border-radius: 10px;
-          box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
-          animation: slideIn 0.4s ease-out;
+          padding: 40px 60px;
+          border-radius: 16px;
+          text-align: center;
+          box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+          animation: popIn 0.4s ease-in-out;
+          max-width: 90%;
         }
-        .alertContent h3 {
+
+        .alertContent h1 {
           margin: 0;
-          font-size: 18px;
-          font-weight: bold;
+          font-size: 2.5rem;
+          font-weight: 800;
+          letter-spacing: 1px;
+          text-transform: uppercase;
         }
+
         .alertContent p {
-          margin: 4px 0 0;
-          font-size: 15px;
+          margin-top: 16px;
+          font-size: 1.2rem;
+          font-weight: 500;
         }
-        @keyframes slideIn {
+
+        @keyframes popIn {
           from {
-            transform: translateY(-20px);
+            transform: scale(0.8);
             opacity: 0;
           }
           to {
-            transform: translateY(0);
+            transform: scale(1);
+            opacity: 1;
+          }
+        }
+
+        @keyframes fadeIn {
+          from {
+            opacity: 0;
+          }
+          to {
             opacity: 1;
           }
         }

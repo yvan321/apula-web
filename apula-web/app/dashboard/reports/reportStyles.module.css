@@ -154,7 +154,7 @@
   padding: 20px;
 }
 
-/* 🪟 Modal */
+/* 🪟 Modal (View Details) */
 .modalOverlay {
   position: fixed;
   top: 0;
@@ -177,6 +177,26 @@
   max-width: 90%;
   box-shadow: 0 5px 15px rgba(0, 0, 0, 0.25);
   animation: slideUp 0.35s ease;
+  position: relative;
+}
+
+/* 🖊️ Edit Button in Top Right */
+.editBtn {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  background: #b71c1c;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+.editBtn:hover {
+  background: #8e0000;
 }
 
 .modalTitle {
@@ -217,6 +237,82 @@
   background: #8e0000;
 }
 
+/* ✏️ Edit Modal Styles */
+.editModal {
+  background: #fff;
+  padding: 25px 30px;
+  border-radius: 14px;
+  width: 400px;
+  max-width: 95%;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.25);
+  animation: slideUp 0.35s ease;
+}
+
+.editModal h3 {
+  font-size: 1.4rem;
+  color: #b71c1c;
+  margin-bottom: 15px;
+  text-align: center;
+}
+
+.editForm {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.editForm input {
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+  outline: none;
+  font-size: 0.95rem;
+}
+
+.editForm input:focus {
+  border-color: #b71c1c;
+  box-shadow: 0 0 0 2px rgba(183, 28, 28, 0.15);
+}
+
+.editActions {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 20px;
+  gap: 10px;
+}
+
+.saveBtn {
+  flex: 1;
+  background: #2e7d32;
+  color: #fff;
+  border: none;
+  padding: 10px 0;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: 0.3s;
+}
+
+.saveBtn:hover {
+  background: #1b5e20;
+}
+
+.cancelBtn {
+  flex: 1;
+  background: #b71c1c;
+  color: #fff;
+  border: none;
+  padding: 10px 0;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: 0.3s;
+}
+
+.cancelBtn:hover {
+  background: #8e0000;
+}
+
 /* ✨ Animations */
 @keyframes fadeIn {
   from {
@@ -238,7 +334,7 @@
   }
 }
 
-/* 📱 Responsive Design */
+/* 📱 Responsive */
 @media (max-width: 768px) {
   .filters {
     flex-direction: column;
@@ -265,6 +361,10 @@
   }
 
   .modalContent {
+    width: 90%;
+  }
+
+  .editModal {
     width: 90%;
   }
 }

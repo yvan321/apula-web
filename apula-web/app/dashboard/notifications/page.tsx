@@ -6,10 +6,11 @@ import styles from "./notificationStyles.module.css";
 
 const NotificationPage = () => {
   const [notifications, setNotifications] = useState([]);
-  const [selectedNotif, setSelectedNotif] = useState(null); // for modal
+  const [selectedNotif, setSelectedNotif] = useState(null);
   const [showModal, setShowModal] = useState(false);
+  const [filter, setFilter] = useState("all"); // ✅ "all" | "read" | "unread"
 
-  // ✅ Mock notifications (replace later with Firestore or API)
+  // ✅ Mock data
   useEffect(() => {
     const mockAlerts = [
       {
@@ -40,18 +41,24 @@ const NotificationPage = () => {
     setNotifications(mockAlerts);
   }, []);
 
-  // ✅ Handle click to open modal
+  // ✅ Handle modal open + mark as read
   const handleOpenModal = (notif) => {
     setSelectedNotif(notif);
     setShowModal(true);
 
-    // mark as read
     setNotifications((prev) =>
       prev.map((n) => (n.id === notif.id ? { ...n, read: true } : n))
     );
   };
 
   const handleCloseModal = () => setShowModal(false);
+
+  // ✅ Filter notifications based on selected filter
+  const filteredNotifications = notifications.filter((n) => {
+    if (filter === "read") return n.read;
+    if (filter === "unread") return !n.read;
+    return true;
+  });
 
   return (
     <div>
@@ -60,15 +67,44 @@ const NotificationPage = () => {
         <div data-aos="fade-up" className={styles.contentSection}>
           <div className={styles.headerRow}>
             <h2 className={styles.pageTitle}>Notifications</h2>
+
+            {/* ✅ Filter Buttons */}
+            <div className={styles.filterContainer}>
+              <button
+                className={`${styles.filterBtn} ${
+                  filter === "all" ? styles.activeFilter : ""
+                }`}
+                onClick={() => setFilter("all")}
+              >
+                All
+              </button>
+              <button
+                className={`${styles.filterBtn} ${
+                  filter === "unread" ? styles.activeFilter : ""
+                }`}
+                onClick={() => setFilter("unread")}
+              >
+                Unread
+              </button>
+              <button
+                className={`${styles.filterBtn} ${
+                  filter === "read" ? styles.activeFilter : ""
+                }`}
+                onClick={() => setFilter("read")}
+              >
+                Read
+              </button>
+            </div>
           </div>
+
           <hr className={styles.separator} />
 
-          {/* Notification List */}
+          {/* ✅ Notification List */}
           <div className={styles.notificationList}>
-            {notifications.length === 0 ? (
-              <p className={styles.noNotif}>No notifications yet.</p>
+            {filteredNotifications.length === 0 ? (
+              <p className={styles.noNotif}>No notifications found.</p>
             ) : (
-              notifications.map((notif) => (
+              filteredNotifications.map((notif) => (
                 <div
                   key={notif.id}
                   onClick={() => handleOpenModal(notif)}
@@ -79,7 +115,10 @@ const NotificationPage = () => {
                   } ${notif.read ? styles.read : styles.unread}`}
                 >
                   <div className={styles.notifInfo}>
-                    <h4>{notif.type}</h4>
+                    <h4>
+                      {notif.type}{" "}
+                      {!notif.read && <span className={styles.unreadDot}></span>}
+                    </h4>
                     <p>
                       <strong>Location:</strong> {notif.location}
                     </p>
@@ -106,7 +145,7 @@ const NotificationPage = () => {
         </div>
       </div>
 
-      {/* 🔔 Modal Popup */}
+      {/* ✅ Modal Popup */}
       {showModal && selectedNotif && (
         <div className={styles.modalOverlay} onClick={handleCloseModal}>
           <div
