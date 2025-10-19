@@ -2,13 +2,12 @@
 
 import Image from "next/image";
 import styles from "./adminheaderstyles.module.css";
-import { useState } from "react";
-import { usePathname } from "next/navigation"; // ✅ Add this
+import { useState, useEffect } from "react";
+import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
   Users,
   UserCheck,
-
   Bell,
   FileText,
   BarChart,
@@ -16,20 +15,53 @@ import {
   LogOut,
 } from "lucide-react";
 
+import { auth, db } from "@/lib/firebase";
+import { onAuthStateChanged, signOut } from "firebase/auth";
+import { doc, getDoc } from "firebase/firestore";
+
 export default function AdminHeader() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const toggleSidebar = () => setSidebarOpen((prev) => !prev);
-
-  const userName = "Neil";
-  const firstInitial = userName.charAt(0);
-
+  const [userName, setUserName] = useState<string>("Loading...");
+  const [initial, setInitial] = useState<string>("?");
   const pathname = usePathname();
 
-  const isActive = (path) => pathname === path;
+  const toggleSidebar = () => setSidebarOpen((prev) => !prev);
 
-  const handleLogout = () => {
+  const isActive = (path: string) => pathname === path;
+
+  const handleLogout = async () => {
+    await signOut(auth);
     window.location.href = "/login";
   };
+
+  // ✅ Load logged-in user data
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        try {
+          const userDoc = await getDoc(doc(db, "users", user.uid));
+          if (userDoc.exists()) {
+            const name = userDoc.data().name || "User";
+            setUserName(name);
+            setInitial(name.charAt(0).toUpperCase());
+          } else {
+            const display = user.displayName || "User";
+            setUserName(display);
+            setInitial(display.charAt(0).toUpperCase());
+          }
+        } catch (err) {
+          console.error("Error fetching user data:", err);
+          setUserName("User");
+          setInitial("U");
+        }
+      } else {
+        setUserName("Guest");
+        setInitial("G");
+      }
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   return (
     <>
@@ -115,8 +147,8 @@ export default function AdminHeader() {
           </a>
         </nav>
 
-        <button className={styles.logoutLink}>
-          <LogOut size={18} className={styles.icon} onClick={handleLogout} />
+        <button className={styles.logoutLink} onClick={handleLogout}>
+          <LogOut size={18} className={styles.icon} />
           Logout
         </button>
       </aside>
@@ -137,8 +169,8 @@ export default function AdminHeader() {
 
         <div className={styles.rightWrapper}>
           <div className={styles.userInfo}>
-            <span className={styles.userName}>Welcome, Admin!</span>
-            <div className={styles.userIcon}>{firstInitial}</div>
+            <span className={styles.userName}>Welcome, {userName}!</span>
+            <div className={styles.userIcon}>{initial}</div>
           </div>
         </div>
       </header>

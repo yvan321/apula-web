@@ -1,18 +1,62 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import AdminHeader from "@/components/shared/adminHeader";
 import styles from "./settingsStyles.module.css";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import { auth, db } from "@/lib/firebase";
+import {
+  updatePassword,
+  updateProfile,
+  onAuthStateChanged,
+} from "firebase/auth";
+import { doc, getDoc, updateDoc } from "firebase/firestore";
+import { useRouter } from "next/navigation";
 
 const SettingsPage = () => {
-  const [name, setName] = useState("John Doe");
+  const [name, setName] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [loading, setLoading] = useState(true);
+  const router = useRouter();
 
-  const handleSave = (e: React.FormEvent) => {
+  // ✅ Protect page & load user data
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        router.push("/login");
+        return;
+      }
+
+      try {
+        const userDoc = await getDoc(doc(db, "users", user.uid));
+        if (userDoc.exists()) {
+          const data = userDoc.data();
+          setName(data.name || user.displayName || "");
+        } else {
+          setName(user.displayName || "");
+        }
+      } catch (error) {
+        console.error("Error loading user data:", error);
+        toast.error("Failed to load user data");
+      } finally {
+        setLoading(false);
+      }
+    });
+
+    return () => unsubscribe();
+  }, [router]);
+
+  // ✅ Save changes handler
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    const user = auth.currentUser;
+    if (!user) {
+      toast.error("No user is logged in");
+      return;
+    }
 
     if (!name.trim()) {
       toast.error("Name cannot be empty");
@@ -24,11 +68,39 @@ const SettingsPage = () => {
       return;
     }
 
-    toast.success("Settings updated successfully!");
-    setPassword("");
-    setConfirmPassword("");
+    try {
+      // 🔹 Update display name in Firebase Auth
+      await updateProfile(user, { displayName: name });
+
+      // 🔹 Update Firestore name
+      await updateDoc(doc(db, "users", user.uid), { name });
+
+      // 🔹 Update password if provided
+      if (password) {
+        await updatePassword(user, password);
+      }
+
+      toast.success("Settings updated successfully!");
+      setPassword("");
+      setConfirmPassword("");
+    } catch (error: any) {
+      console.error("Error updating settings:", error);
+      toast.error(error.message || "Failed to update settings");
+    }
   };
 
+
+  
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-screen text-lg">
+        Loading user data...
+      </div>
+    );
+  }
+
+
+  
   return (
     <div>
       <AdminHeader />
