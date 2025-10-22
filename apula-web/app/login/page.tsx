@@ -3,8 +3,9 @@ import React, { useState } from "react";
 import styles from "./loginstyles.module.css";
 import Image from "next/image";
 import logo from "../../assets/fireapula.png";
-import { signInWithEmailAndPassword } from "firebase/auth";
-import { auth } from "../../lib/firebase";
+import { signInWithEmailAndPassword, signOut } from "firebase/auth";
+import { auth, db } from "../../lib/firebase";
+import { doc, getDoc } from "firebase/firestore";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
@@ -19,34 +20,50 @@ export default function Login() {
     setError("");
 
     if (!username || !password) {
-      setError("Please enter both username and password.");
+      setError("Please enter both email and password.");
       return;
     }
 
     setLoading(true);
     try {
+      // 🔹 Step 1: Sign in with Firebase Auth
       const userCredential = await signInWithEmailAndPassword(
         auth,
         username,
         password
       );
       const user = userCredential.user;
-      console.log("Logged in:", user.email);
-      toast.success("Login successful!", {
+
+      // 🔹 Step 2: Fetch user data from Firestore
+      const userDoc = await getDoc(doc(db, "users", user.uid));
+
+      if (!userDoc.exists()) {
+        await signOut(auth);
+        throw new Error("User data not found in database.");
+      }
+
+      const userData = userDoc.data();
+
+      // 🔹 Step 3: Only allow Admins to log in
+      if (userData.role !== "Admin") {
+        await signOut(auth);
+        throw new Error("Access denied. Admins only.");
+      }
+
+      // 🔹 Step 4: Success → redirect
+      toast.success("Admin login successful!", {
         position: "top-center",
         autoClose: 3000,
-        hideProgressBar: false,
-        closeOnClick: true,
-        pauseOnHover: true,
-        draggable: true,
-        progress: undefined,
         theme: "light",
       });
 
-      window.location.href = "/dashboard";
+      // Redirect to admin dashboard
+      setTimeout(() => {
+        window.location.href = "/dashboard";
+      }, 1500);
     } catch (err: any) {
       console.error(err);
-      setError("Invalid email or password.");
+      setError(err.message || "Invalid email or password.");
     } finally {
       setLoading(false);
     }
@@ -62,11 +79,12 @@ export default function Login() {
 
         <div className={styles.rightContainer}>
           <div className={styles.card}>
-            <h2 className={styles.title}>Log In</h2>
+            <h2 className={styles.title}>Admin Log In</h2>
             <form onSubmit={handleLogin}>
               <input
                 className={styles.input}
                 placeholder="Enter email"
+                type="email"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
               />
@@ -88,9 +106,9 @@ export default function Login() {
             </form>
 
             <p className={styles.signupText}>
-              Don’t have an account?{" "}
+              Not an admin?{" "}
               <a href="/signup" className={styles.signupLink}>
-                Sign up
+                Go to user app
               </a>
             </p>
           </div>
