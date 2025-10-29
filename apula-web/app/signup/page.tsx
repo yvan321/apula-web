@@ -1,4 +1,5 @@
 "use client";
+
 import React, { useState } from "react";
 import styles from "./signupStyles.module.css";
 import Image from "next/image";
@@ -24,10 +25,9 @@ export default function Signup() {
   });
   const [error, setError] = useState("");
 
-  // ✅ Step 1: Email submission
+  // ✅ Step 1: Email submission (send OTP)
   const handleEmailSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
     if (!email) return setError("Please enter your email.");
     if (!email.endsWith("@gmail.com"))
       return setError("Email must be a Gmail address.");
@@ -45,6 +45,7 @@ export default function Signup() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to send OTP");
 
+      toast.success("OTP sent successfully!");
       setStep(2);
     } catch (err: any) {
       setError(err.message);
@@ -53,7 +54,7 @@ export default function Signup() {
     }
   };
 
-  // ✅ Step 2: OTP verification
+  // ✅ Step 2: Verify OTP
   const handleOtpSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -71,6 +72,7 @@ export default function Signup() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Invalid OTP");
 
+      toast.success("OTP verified successfully!");
       setStep(3);
     } catch (err: any) {
       setError(err.message);
@@ -94,11 +96,12 @@ export default function Signup() {
 
     setTimeout(() => {
       setLoading(false);
+      toast.success("Password set successfully!");
       setStep(4);
     }, 800);
   };
 
-  // ✅ Step 4: Final registration (with Firebase)
+  // ✅ Step 4: Final registration (only now store in Firebase)
   const handleFinalSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const { name, contact, address, password } = details;
@@ -111,7 +114,7 @@ export default function Signup() {
     setLoading(true);
 
     try {
-      // 1️⃣ Create user in Firebase Auth
+      // 🔒 Create Firebase Auth user
       const userCredential = await createUserWithEmailAndPassword(
         auth,
         email,
@@ -119,28 +122,26 @@ export default function Signup() {
       );
       const user = userCredential.user;
 
-      // 2️⃣ Store extra user details in Firestore
+      // 🔒 Store extra details only after password is set
       await setDoc(doc(db, "users", user.uid), {
         email,
         name,
         contact,
         address,
-        role: "Admin", // you can change this later for responders/admins
+        role: "admin", // default role
         createdAt: new Date(),
+        verified: true,
       });
 
       toast.success("Account created successfully!", {
         position: "top-center",
         autoClose: 3000,
-        hideProgressBar: false,
-        closeOnClick: true,
-        pauseOnHover: true,
-        draggable: true,
-        progress: undefined,
         theme: "light",
       });
 
-      window.location.href = "/login";
+      setTimeout(() => {
+        window.location.href = "/login";
+      }, 2000);
     } catch (err: any) {
       console.error(err);
       setError(err.message || "Failed to register. Try again.");
@@ -184,11 +185,7 @@ export default function Signup() {
                   onChange={(e) => setEmail(e.target.value)}
                 />
                 {error && <p className={styles.error}>{error}</p>}
-                <button
-                  type="submit"
-                  className={styles.button}
-                  disabled={loading}
-                >
+                <button type="submit" className={styles.button} disabled={loading}>
                   {loading ? "Sending OTP..." : "Send OTP"}
                 </button>
               </form>
@@ -210,11 +207,7 @@ export default function Signup() {
                   onChange={(e) => setOtp(e.target.value)}
                 />
                 {error && <p className={styles.error}>{error}</p>}
-                <button
-                  type="submit"
-                  className={styles.button}
-                  disabled={loading}
-                >
+                <button type="submit" className={styles.button} disabled={loading}>
                   {loading ? "Verifying..." : "Verify OTP"}
                 </button>
               </form>
@@ -243,11 +236,7 @@ export default function Signup() {
                   }
                 />
                 {error && <p className={styles.error}>{error}</p>}
-                <button
-                  type="submit"
-                  className={styles.button}
-                  disabled={loading}
-                >
+                <button type="submit" className={styles.button} disabled={loading}>
                   {loading ? "Checking..." : "Next"}
                 </button>
               </form>
@@ -285,11 +274,7 @@ export default function Signup() {
                   }
                 />
                 {error && <p className={styles.error}>{error}</p>}
-                <button
-                  type="submit"
-                  className={styles.button}
-                  disabled={loading}
-                >
+                <button type="submit" className={styles.button} disabled={loading}>
                   {loading ? "Registering..." : "Register"}
                 </button>
               </form>

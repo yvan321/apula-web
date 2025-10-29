@@ -46,10 +46,10 @@ export default function Login() {
 
       const userData = userDoc.data();
 
-      if (userData.role !== "Admin") {
-        await signOut(auth);
-        throw new Error("Access denied. Admins only.");
-      }
+      if (userData.role !== "admin") {
+  await signOut(auth);
+  throw new Error("Access denied. Admins only.");
+}
 
       toast.success("Admin login successful!", {
         position: "top-center",
