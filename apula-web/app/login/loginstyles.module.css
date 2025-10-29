@@ -123,6 +123,28 @@
   text-decoration: underline;
 }
 
+.forgotWrapper {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 5px;
+  margin-bottom: 10px;
+}
+
+.forgotLink {
+  background: none;
+  border: none;
+  color: #ff4d4f;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: 0.3s ease;
+  text-decoration: underline;
+}
+
+.forgotLink:hover {
+  color: #e63946;
+}
+
 /* ===== Responsive Styles ===== */
 @media (max-width: 768px) {
   .bgContainer {
