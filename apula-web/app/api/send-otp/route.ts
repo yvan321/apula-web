@@ -1,14 +1,31 @@
 import { NextResponse } from "next/server";
 import nodemailer from "nodemailer";
+import admin from "firebase-admin";
+import { readFileSync } from "fs";
 
-const otpStore = new Map<string, string>(); // ⚠️ temporary in-memory store (for testing)
+// ✅ Initialize Firebase Admin SDK using file path from .env
+if (!admin.apps.length) {
+  const serviceAccountPath = process.env.GOOGLE_APPLICATION_CREDENTIALS;
+
+  if (!serviceAccountPath) {
+    throw new Error("GOOGLE_APPLICATION_CREDENTIALS is not defined in .env");
+  }
+
+  const serviceAccount = JSON.parse(readFileSync(serviceAccountPath, "utf-8"));
+
+  admin.initializeApp({
+    credential: admin.credential.cert(serviceAccount),
+  });
+}
+
+const otpStore = new Map<string, string>(); // temporary in-memory OTP storage
 
 export async function POST(req: Request) {
   try {
     const { email } = await req.json();
 
     if (!email) {
-      return NextResponse.json({ error: "Email required" }, { status: 400 });
+      return NextResponse.json({ error: "Email is required" }, { status: 400 });
     }
 
     // Generate 6-digit OTP
@@ -24,7 +41,7 @@ export async function POST(req: Request) {
       },
     });
 
-    // Send email
+    // Send email with OTP
     await transporter.sendMail({
       from: `"APULA System" <${process.env.EMAIL_USER}>`,
       to: email,
@@ -36,15 +53,15 @@ export async function POST(req: Request) {
       `,
     });
 
-    console.log(`OTP sent to ${email}: ${otp}`);
+    console.log(`✅ OTP sent to ${email}: ${otp}`);
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Error sending OTP:", error);
+    console.error("❌ Error sending OTP:", error);
     return NextResponse.json({ error: "Failed to send OTP" }, { status: 500 });
   }
 }
 
-// Helper (for OTP verification)
+// Helper function for OTP verification
 export function verifyOtp(email: string, otp: string) {
   return otpStore.get(email) === otp;
 }

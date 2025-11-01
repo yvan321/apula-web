@@ -9,14 +9,13 @@ import "react-toastify/dist/ReactToastify.css";
 export default function ForgotPassword() {
   const [step, setStep] = useState(1); // 1=email, 2=otp, 3=new pass
   const [email, setEmail] = useState("");
-  const [generatedOtp, setGeneratedOtp] = useState("123456"); // ✅ persist fixed OTP
   const [enteredOtp, setEnteredOtp] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // 🔹 Step 1: Mock sending OTP
-  const handleSendOtp = (e) => {
+  // 🔹 STEP 1: Send OTP via API
+  const handleSendOtp = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!email) {
@@ -25,37 +24,59 @@ export default function ForgotPassword() {
     }
 
     setLoading(true);
-    setTimeout(() => {
-      console.log("📩 Mock OTP sent to email:", generatedOtp); // ✅ always 123456
-      toast.success("OTP sent to your email (mock: 123456).", {
-        position: "top-center",
-        autoClose: 3000,
+    try {
+      const res = await fetch("/api/send-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
       });
-      setStep(2);
+
+      const data = await res.json();
+
+      if (data.success) {
+        toast.success("OTP sent to your email.", { position: "top-center" });
+        setStep(2);
+      } else {
+        toast.error(data.error || "Failed to send OTP.", { position: "top-center" });
+      }
+    } catch (err) {
+      toast.error("Something went wrong.", { position: "top-center" });
+    } finally {
       setLoading(false);
-    }, 1200);
-  };
-
-  // 🔹 Step 2: Verify OTP
-  const handleVerifyOtp = (e) => {
-    e.preventDefault();
-
-    console.log("🔍 Entered:", enteredOtp, "| Expected:", generatedOtp);
-
-    if (enteredOtp.trim() === generatedOtp.trim()) {
-      toast.success("✅ OTP verified successfully!", {
-        position: "top-center",
-      });
-      setStep(3);
-    } else {
-      toast.error("Incorrect OTP. Please try again.", {
-        position: "top-center",
-      });
     }
   };
 
-  // 🔹 Step 3: Save new password (mock)
-  const handleResetPassword = (e) => {
+  // 🔹 STEP 2: Verify OTP via API
+  const handleVerifyOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!enteredOtp) {
+      toast.warn("Please enter the OTP.", { position: "top-center" });
+      return;
+    }
+
+    try {
+      const res = await fetch("/api/verify-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, otp: enteredOtp }),
+      });
+
+      const data = await res.json();
+
+      if (data.success) {
+        toast.success("OTP verified successfully!", { position: "top-center" });
+        setStep(3);
+      } else {
+        toast.error(data.error || "Invalid OTP.", { position: "top-center" });
+      }
+    } catch (err) {
+      toast.error("Something went wrong.", { position: "top-center" });
+    }
+  };
+
+  // 🔹 STEP 3: Reset Password via API
+  const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (newPassword !== confirmPassword) {
@@ -64,16 +85,33 @@ export default function ForgotPassword() {
     }
 
     if (newPassword.length < 6) {
-      toast.warn("Password must be at least 6 characters.", {
-        position: "top-center",
-      });
+      toast.warn("Password must be at least 6 characters.", { position: "top-center" });
       return;
     }
 
-    toast.success("Password successfully reset!", { position: "top-center" });
-    setTimeout(() => {
-      window.location.href = "/login";
-    }, 2000);
+    setLoading(true);
+    try {
+      const res = await fetch("/api/reset-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, newPassword }),
+      });
+
+      const data = await res.json();
+
+      if (data.success) {
+        toast.success("Password successfully reset!", { position: "top-center" });
+        setTimeout(() => {
+          window.location.href = "/login";
+        }, 2000);
+      } else {
+        toast.error(data.error || "Failed to reset password.", { position: "top-center" });
+      }
+    } catch (err) {
+      toast.error("Something went wrong.", { position: "top-center" });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -121,15 +159,6 @@ export default function ForgotPassword() {
             {step === 2 && (
               <form onSubmit={handleVerifyOtp}>
                 <p>Enter the 6-digit code sent to your email.</p>
-                <p
-                  style={{
-                    fontSize: "0.9rem",
-                    color: "#777",
-                    marginBottom: "8px",
-                  }}
-                >
-                  (Mock OTP: <strong>123456</strong>)
-                </p>
                 <input
                   className={styles.input}
                   type="text"
@@ -161,8 +190,12 @@ export default function ForgotPassword() {
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                 />
-                <button type="submit" className={styles.button}>
-                  Save New Password
+                <button
+                  type="submit"
+                  className={styles.button}
+                  disabled={loading}
+                >
+                  {loading ? "Saving..." : "Save New Password"}
                 </button>
               </form>
             )}

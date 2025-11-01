@@ -1,15 +1,38 @@
+// /app/api/verify-otp/route.ts
 import { NextResponse } from "next/server";
+import admin from "firebase-admin";
 import { verifyOtp } from "../send-otp/route";
 
+if (!admin.apps.length) {
+  admin.initializeApp({
+    credential: admin.credential.cert(
+      JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT as string)
+    ),
+  });
+}
+
 export async function POST(req: Request) {
-  const { email, otp } = await req.json();
-  if (!email || !otp)
-    return NextResponse.json({ error: "Missing fields" }, { status: 400 });
+  try {
+    const { email, otp } = await req.json();
 
-  const isValid = verifyOtp(email, otp);
+    if (!email || !otp) {
+      return NextResponse.json({ error: "Missing fields" }, { status: 400 });
+    }
 
-  if (!isValid)
-    return NextResponse.json({ error: "Invalid OTP" }, { status: 400 });
+    // ✅ Check OTP validity only
+    const isValid = verifyOtp(email, otp);
+    if (!isValid) {
+      return NextResponse.json({ error: "Invalid or expired OTP" }, { status: 400 });
+    }
 
-  return NextResponse.json({ success: true });
+    // ✅ OTP verified — no Firestore write yet
+    // The frontend can now proceed to the password setup step
+    return NextResponse.json({
+      success: true,
+      message: "OTP verified successfully. Proceed to set password.",
+    });
+  } catch (err) {
+    console.error("Error verifying OTP:", err);
+    return NextResponse.json({ error: "Failed to verify OTP" }, { status: 500 });
+  }
 }
