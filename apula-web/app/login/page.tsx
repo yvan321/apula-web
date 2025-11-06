@@ -143,9 +143,9 @@ export default function Login() {
             </form>
 
             <p className={styles.signupText}>
-              Not an admin?{" "}
+              Don't have an account?{" "}
               <a href="/signup" className={styles.signupLink}>
-                Go to user app
+                Sign up
               </a>
             </p>
           </div>
