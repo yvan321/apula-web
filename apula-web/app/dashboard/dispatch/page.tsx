@@ -1,58 +1,70 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import AdminHeader from "@/components/shared/adminHeader";
 import styles from "./dispatch.module.css";
 import { FaSearch, FaTruck, FaEye } from "react-icons/fa";
+import {
+  collection,
+  getDocs,
+  doc,
+  updateDoc,
+  onSnapshot,
+} from "firebase/firestore";
+import { db } from "@/lib/firebase";
+
 
 const DispatchPage = () => {
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedResponder, setSelectedResponder] = useState(null);
+  const [responders, setResponders] = useState<any[]>([]);
+  const [selectedResponder, setSelectedResponder] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
 
-  // ✅ Sample responders with status
-  const [responders, setResponders] = useState([
-    {
-      id: 1,
-      name: "LeBron James",
-      department: "Fire Department",
-      contact: "09181234567",
-      address: "Imus City, Cavite",
-      email: "lebronresponder@gmail.com",
-      created_time: "2025-02-05 09:45",
-      status: "Available",
-    },
-    {
-      id: 2,
-      name: "Stephen Curry",
-      department: "Fire Department",
-      contact: "09174561234",
-      address: "Bacoor City, Cavite",
-      email: "scurryresponder@gmail.com",
-      created_time: "2025-03-12 10:12",
-      status: "Dispatched",
-    },
-  ]);
+  // ✅ Fetch responders from Firestore (real-time)
+  useEffect(() => {
+    const respondersRef = collection(db, "users");
 
-  // ✅ Filter responders based on search input
+    // Listen for real-time changes
+    const unsubscribe = onSnapshot(respondersRef, (snapshot) => {
+      const responderData = snapshot.docs
+        .map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }))
+        // ✅ Show only responders
+        .filter((r: any) => r.role?.toLowerCase() === "responder");
+
+      setResponders(responderData);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  // ✅ Filter responders by search term
   const filteredResponders = responders.filter(
     (r) =>
-      r.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      r.department.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      r.email.toLowerCase().includes(searchTerm.toLowerCase())
+      r.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      r.department?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      r.email?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // ✅ Open modal for viewing details
-  const openModal = (responder) => setSelectedResponder(responder);
-  const closeModal = () => setSelectedResponder(null);
+  // ✅ Dispatch action (update status in Firestore)
+  const handleDispatch = async (id: string) => {
+    try {
+      const responderRef = doc(db, "users", id);
+      await updateDoc(responderRef, { status: "Dispatched" });
 
-  // ✅ Dispatch action (change status)
-  const handleDispatch = (responderId) => {
-    setResponders((prev) =>
-      prev.map((r) =>
-        r.id === responderId ? { ...r, status: "Dispatched" } : r
-      )
-    );
+      alert("Responder dispatched successfully!");
+    } catch (error) {
+      console.error("Error updating responder:", error);
+      alert("Failed to dispatch responder.");
+    }
   };
+
+  // ✅ Open & close modal
+  const openModal = (responder: any) => setSelectedResponder(responder);
+  const closeModal = () => setSelectedResponder(null);
 
   return (
     <div>
@@ -82,64 +94,68 @@ const DispatchPage = () => {
 
           {/* Table */}
           <div className={styles.tableSection}>
-            <table className={styles.userTable}>
-              <thead>
-                <tr>
-                  <th>ID</th>
-                  <th>Name</th>
-                  <th>Department</th>
-                  <th>Email</th>
-                  <th>Status</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredResponders.length > 0 ? (
-                  filteredResponders.map((r) => (
-                    <tr key={r.id}>
-                      <td data-label="ID">{r.id}</td>
-                      <td data-label="Name">{r.name}</td>
-                      <td data-label="Department">{r.department}</td>
-                      <td data-label="Email">{r.email}</td>
-                      <td data-label="Status">
-                        <span
-                          className={
-                            r.status === "Available"
-                              ? styles.statusAvailable
-                              : styles.statusDispatched
-                          }
-                        >
-                          {r.status}
-                        </span>
-                      </td>
-                      <td data-label="Actions">
-                        {r.status === "Available" ? (
-                          <button
-                            className={styles.dispatchBtn}
-                            onClick={() => handleDispatch(r.id)}
+            {loading ? (
+              <p className={styles.loading}>Loading responders...</p>
+            ) : (
+              <table className={styles.userTable}>
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>Name</th>
+                    <th>Department</th>
+                    <th>Email</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredResponders.length > 0 ? (
+                    filteredResponders.map((r) => (
+                      <tr key={r.id}>
+                        <td data-label="ID">{r.id.slice(0, 6)}...</td>
+                        <td data-label="Name">{r.name || "N/A"}</td>
+                        <td data-label="Department">{r.address || "N/A"}</td>
+                        <td data-label="Email">{r.email || "N/A"}</td>
+                        <td data-label="Status">
+                          <span
+                            className={
+                              r.status === "Available"
+                                ? styles.statusAvailable
+                                : styles.statusDispatched
+                            }
                           >
-                            <FaTruck /> Dispatch
-                          </button>
-                        ) : (
-                          <button
-                            className={styles.viewBtn}
-                            onClick={() => openModal(r)}
-                          >
-                            <FaEye /> View
-                          </button>
-                        )}
+                            {r.status || "Available"}
+                          </span>
+                        </td>
+                        <td data-label="Actions">
+                          {r.status === "Available" ? (
+                            <button
+                              className={styles.dispatchBtn}
+                              onClick={() => handleDispatch(r.id)}
+                            >
+                              <FaTruck /> Dispatch
+                            </button>
+                          ) : (
+                            <button
+                              className={styles.viewBtn}
+                              onClick={() => openModal(r)}
+                            >
+                              <FaEye /> View
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={6} className={styles.noResults}>
+                        No responders found.
                       </td>
                     </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan="6" className={styles.noResults}>
-                      No responders found.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
+                  )}
+                </tbody>
+              </table>
+            )}
           </div>
         </div>
       </div>
@@ -153,13 +169,31 @@ const DispatchPage = () => {
           >
             <h3 className={styles.modalTitle}>Responder Information</h3>
             <div className={styles.modalDetails}>
-              <p><strong>Name:</strong> {selectedResponder.name}</p>
-              <p><strong>Department:</strong> {selectedResponder.department}</p>
-              <p><strong>Contact:</strong> {selectedResponder.contact}</p>
-              <p><strong>Address:</strong> {selectedResponder.address}</p>
-              <p><strong>Email:</strong> {selectedResponder.email}</p>
-              <p><strong>Status:</strong> {selectedResponder.status}</p>
-              <p><strong>Created Time:</strong> {selectedResponder.created_time}</p>
+              <p>
+                <strong>Name:</strong> {selectedResponder.name || "N/A"}
+              </p>
+              <p>
+                <strong>Department:</strong>{" "}
+                {selectedResponder.address || "N/A"}
+              </p>
+              <p>
+                <strong>Contact:</strong>{" "}
+                {selectedResponder.contact || "N/A"}
+              </p>
+              <p>
+                <strong>Email:</strong> {selectedResponder.email || "N/A"}
+              </p>
+              <p>
+                <strong>Status:</strong> {selectedResponder.status || "N/A"}
+              </p>
+              <p>
+                <strong>Created At:</strong>{" "}
+                {selectedResponder.createdAt
+                  ? new Date(
+                      selectedResponder.createdAt.seconds * 1000
+                    ).toLocaleString()
+                  : "N/A"}
+              </p>
             </div>
             <button className={styles.closeBtn} onClick={closeModal}>
               Close
