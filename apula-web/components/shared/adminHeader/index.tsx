@@ -13,6 +13,7 @@ import {
   BarChart,
   Settings,
   LogOut,
+  Send, // ✅ added icon for Dispatch
 } from "lucide-react";
 
 import { auth, db } from "@/lib/firebase";
@@ -65,6 +66,7 @@ export default function AdminHeader() {
 
   return (
     <>
+      {/* Sidebar */}
       <aside
         className={`${styles.sidebar} ${sidebarOpen ? styles.sidebarOpen : ""}`}
       >
@@ -114,6 +116,17 @@ export default function AdminHeader() {
           >
             <UserCheck size={18} className={styles.icon} />
             <span>Responders</span>
+          </a>
+
+          {/* ✅ New Dispatch Section */}
+          <a
+            href="/dashboard/dispatch"
+            className={`${styles.sidebarLink} ${
+              isActive("/dashboard/dispatch") ? styles.activeLink : ""
+            }`}
+          >
+            <Send size={18} className={styles.icon} />
+            <span>Dispatch</span>
           </a>
 
           <a

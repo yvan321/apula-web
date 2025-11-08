@@ -4,6 +4,7 @@
   min-height: 100vh;
 }
 
+/* ---------- CONTENT SECTION ---------- */
 .contentSection {
   background-color: white;
   padding: 24px;
@@ -135,7 +136,7 @@
   margin-left: 6px;
 }
 
-/* ---------- MODAL ---------- */
+/* ---------- MODAL (Shared) ---------- */
 .modalOverlay {
   position: fixed;
   top: 0;
@@ -180,6 +181,7 @@
   line-height: 1.4;
 }
 
+/* ---------- BUTTONS ---------- */
 .closeBtn {
   margin-top: 18px;
   background: #ff4d4f;
@@ -197,6 +199,124 @@
   background: #d63031;
 }
 
+.dispatchBtn {
+  background-color: #ff4d4d;
+  color: white;
+  border: none;
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-weight: bold;
+  cursor: pointer;
+  margin-right: 8px;
+  transition: 0.3s;
+}
+
+.dispatchBtn:hover {
+  background-color: #d32f2f;
+}
+
+.modalActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+/* ---------- DISPATCH MODAL ---------- */
+.dispatchModal {
+  max-width: 480px;
+  background: #fff;
+  border-top: 5px solid #ff4d4f;
+}
+
+.dispatchHeader {
+  text-align: center;
+  margin-bottom: 10px;
+}
+
+.dispatchHeader h3 {
+  color: #d32f2f;
+  font-size: 20px;
+  margin-bottom: 4px;
+}
+
+.subText {
+  font-size: 13px;
+  color: #777;
+  margin-bottom: 16px;
+}
+
+.responderList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 300px;
+  overflow-y: auto;
+  padding-right: 5px;
+}
+
+.responderCard {
+  background: #fff8f8;
+  border: 1px solid #ffdcdc;
+  border-radius: 10px;
+  padding: 14px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: all 0.3s ease;
+}
+
+.responderCard:hover {
+  transform: translateY(-2px);
+  background: #fff1f1;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+.responderInfo {
+  flex: 1;
+}
+
+.responderName {
+  font-weight: 700;
+  color: #222;
+  font-size: 15px;
+  margin-bottom: 3px;
+}
+
+.responderEmail {
+  color: #555;
+  font-size: 13px;
+  margin-bottom: 2px;
+}
+
+.responderContact {
+  font-size: 13px;
+  color: #333;
+}
+
+.noResponder {
+  text-align: center;
+  color: #888;
+  font-size: 14px;
+  margin: 20px 0;
+}
+
+.dispatchNowBtn {
+  background-color: #ff4d4f;
+  color: white;
+  border: none;
+  padding: 8px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: background 0.3s;
+}
+
+.dispatchNowBtn:hover {
+  background-color: #d32f2f;
+}
+
+/* ---------- ANIMATION ---------- */
 @keyframes fadeIn {
   from {
     opacity: 0;
