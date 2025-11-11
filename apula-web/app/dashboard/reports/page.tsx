@@ -18,6 +18,8 @@ import {
   onSnapshot,
   updateDoc,
   doc,
+  getDocs,
+  where,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
@@ -29,7 +31,7 @@ const ReportPage = () => {
   const [editMode, setEditMode] = useState(false);
   const [editedStatus, setEditedStatus] = useState("");
 
-  // ✅ Real-time Firestore data
+  // ✅ Real-time listener for Alerts
   useEffect(() => {
     const q = query(collection(db, "alerts"), orderBy("timestamp", "desc"));
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -43,13 +45,37 @@ const ReportPage = () => {
     return () => unsubscribe();
   }, []);
 
+  // ✅ 🔄 Auto-sync with Dispatches: when a dispatch is resolved, update its alert
+  useEffect(() => {
+    const dispatchesRef = collection(db, "dispatches");
+    const unsubscribe = onSnapshot(dispatchesRef, async (snapshot) => {
+      snapshot.docChanges().forEach(async (change) => {
+        if (change.type === "modified") {
+          const dispatch = change.doc.data();
+
+          // Only handle Resolved ones
+          if (dispatch.status === "Resolved" && dispatch.alertId) {
+            try {
+              const alertRef = doc(db, "alerts", dispatch.alertId);
+              await updateDoc(alertRef, { status: "Resolved" });
+              console.log(`✅ Synced alert ${dispatch.alertId} -> Resolved`);
+            } catch (error) {
+              console.error("⚠️ Failed to sync alert:", error);
+            }
+          }
+        }
+      });
+    });
+
+    return () => unsubscribe();
+  }, []);
+
   // ✅ Search filter
   useEffect(() => {
     const result = reports.filter(
       (r) =>
         r.userName?.toLowerCase().includes(search.toLowerCase()) ||
         r.userAddress?.toLowerCase().includes(search.toLowerCase())
-      // || r.description?.toLowerCase().includes(search.toLowerCase()) // 🔸 Commented out
     );
     setFilteredReports(result);
   }, [search, reports]);
@@ -69,7 +95,7 @@ const ReportPage = () => {
     setEditedStatus(selectedReport.status);
   };
 
-  // ✅ Save updated status to Firestore
+  // ✅ Save updated status manually (still optional)
   const handleSave = async () => {
     try {
       const ref = doc(db, "alerts", selectedReport.id);
@@ -111,14 +137,6 @@ const ReportPage = () => {
                   <p>
                     <FaMapMarkerAlt /> {report.userAddress || "No address"}
                   </p>
-
-                  {/* 🗒️ Description commented out */}
-                  {/*
-                  <p>
-                    <FaClipboardList />{" "}
-                    {report.description || "No description provided."}
-                  </p>
-                  */}
 
                   <p
                     className={`${styles.status} ${
@@ -169,19 +187,13 @@ const ReportPage = () => {
                       {selectedReport.userAddress || "N/A"}
                     </p>
 
-                    {/* 🗒️ Description commented out */}
-                    {/*
-                    <p>
-                      <FaClipboardList /> <strong>Description:</strong>{" "}
-                      {selectedReport.description || "N/A"}
-                    </p>
-                    */}
-
                     <p>
                       <strong>Status:</strong>{" "}
                       <span
                         className={`${styles.status} ${
-                          styles[selectedReport.status?.toLowerCase() || "pending"]
+                          styles[
+                            selectedReport.status?.toLowerCase() || "pending"
+                          ]
                         }`}
                       >
                         {selectedReport.status || "Pending"}

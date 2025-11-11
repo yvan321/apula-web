@@ -12,19 +12,18 @@ import {
   updateDoc,
   doc,
   getDocs,
-  addDoc,
   where,
   serverTimestamp,
   writeBatch,
 } from "firebase/firestore";
 
 const NotificationPage = () => {
-  const [notifications, setNotifications] = useState([]);
-  const [selectedNotif, setSelectedNotif] = useState(null);
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [selectedNotif, setSelectedNotif] = useState<any>(null);
   const [showModal, setShowModal] = useState(false);
   const [filter, setFilter] = useState("all");
   const [showDispatchModal, setShowDispatchModal] = useState(false);
-  const [responders, setResponders] = useState([]);
+  const [responders, setResponders] = useState<any[]>([]);
 
   // ✅ Real-time listener for alerts
   useEffect(() => {
@@ -40,10 +39,9 @@ const NotificationPage = () => {
   }, []);
 
   // ✅ Open modal & mark as read
-  const handleOpenModal = async (notif) => {
+  const handleOpenModal = async (notif: any) => {
     setSelectedNotif(notif);
     setShowModal(true);
-
     try {
       await updateDoc(doc(db, "alerts", notif.id), { read: true });
     } catch (error) {
@@ -76,39 +74,49 @@ const NotificationPage = () => {
     }
   };
 
-  // 🚨 Dispatch a responder
-  const handleDispatch = async (responder) => {
+  // 🚨 Dispatch responder (includes reporter info)
+  const handleDispatch = async (responder: any) => {
     if (!selectedNotif) return;
 
     try {
-      // ✅ Use Firestore batch for atomic operations
       const batch = writeBatch(db);
 
+      // ✅ Extract reporter details safely
+      const reporterName = selectedNotif.userName || "Unknown";
+      const reporterAddress = selectedNotif.userAddress || "N/A";
+      const reporterContact = selectedNotif.userContact || "N/A";
+      const reporterEmail = selectedNotif.userEmail || "N/A";
+
+      // 1️⃣ Add dispatch record
       const dispatchRef = doc(collection(db, "dispatches"));
       batch.set(dispatchRef, {
         alertId: selectedNotif.id,
-        alertType: selectedNotif.type,
-        alertLocation: selectedNotif.location,
+        alertType: selectedNotif.type || "🔥 Fire Detected",
+        alertLocation: selectedNotif.location || selectedNotif.alertLocation || "Unknown",
         responderId: responder.id,
         responderName: responder.name,
         responderContact: responder.contact,
         responderEmail: responder.email.toLowerCase(),
-        userReported: selectedNotif.userName,
+        userReported: reporterName,
+        userAddress: reporterAddress, // ✅ FIXED
+        userContact: reporterContact, // ✅ FIXED
+        userEmail: reporterEmail,
         status: "Dispatched",
         timestamp: serverTimestamp(),
-        dispatchedBy: "Admin Panel", // optional tracking
+        dispatchedBy: "Admin Panel",
       });
 
+      // 2️⃣ Update alert status
       const alertRef = doc(db, "alerts", selectedNotif.id);
       batch.update(alertRef, { status: "Dispatched" });
 
+      // 3️⃣ Update responder status
+      const responderRef = doc(db, "users", responder.id);
+      batch.update(responderRef, { status: "Dispatched" });
+
       await batch.commit();
 
-      // ✅ Confirmation
-      setTimeout(() => {
-        alert(`🚒 Responder ${responder.name} has been dispatched successfully!`);
-      }, 500);
-
+      alert(`🚒 Responder ${responder.name} has been dispatched successfully!`);
       setShowDispatchModal(false);
       setShowModal(false);
     } catch (error) {
@@ -127,30 +135,17 @@ const NotificationPage = () => {
 
             {/* 🔍 Filter Buttons */}
             <div className={styles.filterContainer}>
-              <button
-                className={`${styles.filterBtn} ${
-                  filter === "all" ? styles.activeFilter : ""
-                }`}
-                onClick={() => setFilter("all")}
-              >
-                All
-              </button>
-              <button
-                className={`${styles.filterBtn} ${
-                  filter === "unread" ? styles.activeFilter : ""
-                }`}
-                onClick={() => setFilter("unread")}
-              >
-                Unread
-              </button>
-              <button
-                className={`${styles.filterBtn} ${
-                  filter === "read" ? styles.activeFilter : ""
-                }`}
-                onClick={() => setFilter("read")}
-              >
-                Read
-              </button>
+              {["all", "unread", "read"].map((btn) => (
+                <button
+                  key={btn}
+                  className={`${styles.filterBtn} ${
+                    filter === btn ? styles.activeFilter : ""
+                  }`}
+                  onClick={() => setFilter(btn)}
+                >
+                  {btn.charAt(0).toUpperCase() + btn.slice(1)}
+                </button>
+              ))}
             </div>
           </div>
 
@@ -210,7 +205,7 @@ const NotificationPage = () => {
         </div>
       </div>
 
-      {/* 🔥 Alert Modal */}
+      {/* 🔥 Fire Alert Modal */}
       {showModal && selectedNotif && (
         <div className={styles.modalOverlay} onClick={handleCloseModal}>
           <div
@@ -234,7 +229,6 @@ const NotificationPage = () => {
             </p>
 
             <hr style={{ margin: "10px 0" }} />
-
             <h4>User Information</h4>
             <p>
               <strong>Name:</strong> {selectedNotif.userName || "N/A"}
@@ -250,7 +244,6 @@ const NotificationPage = () => {
             </p>
 
             <hr style={{ margin: "10px 0" }} />
-
             <p className={styles.desc}>
               {selectedNotif.description || "Fire detected in this area."}
             </p>
