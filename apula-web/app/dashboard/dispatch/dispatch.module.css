@@ -135,3 +135,30 @@
   color: #777;
   padding: 15px;
 }
+
+.alertModal {
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+.alertCard {
+  background: #fff;
+  padding: 16px;
+  margin-bottom: 10px;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.assignBtn {
+  background: #e60000;
+  color: #fff;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  margin-top: 8px;
+}
+
+.assignBtn:hover {
+  background: #b30000;
+}
