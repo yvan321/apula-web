@@ -14,6 +14,8 @@ import {
   getDocs,
   addDoc,
   where,
+  serverTimestamp,
+  writeBatch,
 } from "firebase/firestore";
 
 const NotificationPage = () => {
@@ -21,12 +23,10 @@ const NotificationPage = () => {
   const [selectedNotif, setSelectedNotif] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [filter, setFilter] = useState("all");
-
-  // 🚒 Dispatch Modal State
   const [showDispatchModal, setShowDispatchModal] = useState(false);
   const [responders, setResponders] = useState([]);
 
-  // ✅ Real-time Firestore listener for alerts
+  // ✅ Real-time listener for alerts
   useEffect(() => {
     const q = query(collection(db, "alerts"), orderBy("timestamp", "desc"));
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -53,7 +53,7 @@ const NotificationPage = () => {
 
   const handleCloseModal = () => setShowModal(false);
 
-  // ✅ Filter by read/unread
+  // ✅ Filter notifications
   const filteredNotifications = notifications.filter((n) => {
     if (filter === "read") return n.read;
     if (filter === "unread") return !n.read;
@@ -81,30 +81,39 @@ const NotificationPage = () => {
     if (!selectedNotif) return;
 
     try {
-      // 1️⃣ Record dispatch in Firestore
-      await addDoc(collection(db, "dispatches"), {
+      // ✅ Use Firestore batch for atomic operations
+      const batch = writeBatch(db);
+
+      const dispatchRef = doc(collection(db, "dispatches"));
+      batch.set(dispatchRef, {
         alertId: selectedNotif.id,
         alertType: selectedNotif.type,
+        alertLocation: selectedNotif.location,
         responderId: responder.id,
         responderName: responder.name,
         responderContact: responder.contact,
-        responderEmail: responder.email,
-        alertLocation: selectedNotif.location,
+        responderEmail: responder.email.toLowerCase(),
         userReported: selectedNotif.userName,
-        timestamp: new Date(),
         status: "Dispatched",
+        timestamp: serverTimestamp(),
+        dispatchedBy: "Admin Panel", // optional tracking
       });
 
-      // 2️⃣ Update alert status to "Dispatched"
-      await updateDoc(doc(db, "alerts", selectedNotif.id), {
-        status: "Dispatched",
-      });
+      const alertRef = doc(db, "alerts", selectedNotif.id);
+      batch.update(alertRef, { status: "Dispatched" });
 
-      alert(`🚓 Responder ${responder.name} has been dispatched!`);
+      await batch.commit();
+
+      // ✅ Confirmation
+      setTimeout(() => {
+        alert(`🚒 Responder ${responder.name} has been dispatched successfully!`);
+      }, 500);
+
       setShowDispatchModal(false);
       setShowModal(false);
     } catch (error) {
       console.error("❌ Dispatch failed:", error);
+      alert("Failed to dispatch responder. Please try again.");
     }
   };
 
@@ -116,7 +125,7 @@ const NotificationPage = () => {
           <div className={styles.headerRow}>
             <h2 className={styles.pageTitle}>Notifications</h2>
 
-            {/* ✅ Filter Buttons */}
+            {/* 🔍 Filter Buttons */}
             <div className={styles.filterContainer}>
               <button
                 className={`${styles.filterBtn} ${
@@ -157,10 +166,8 @@ const NotificationPage = () => {
                   key={notif.id}
                   onClick={() => handleOpenModal(notif)}
                   className={`${styles.notificationCard} ${
-                    notif.status === "Pending"
-                      ? styles.pending
-                      : styles.resolved
-                  } ${notif.read ? styles.read : styles.unread}`}
+                    notif.read ? styles.read : styles.unread
+                  }`}
                 >
                   <div className={styles.notifInfo}>
                     <h4>
@@ -180,7 +187,7 @@ const NotificationPage = () => {
                     </p>
                     <p>
                       <strong>Date:</strong>{" "}
-                      {notif.timestamp
+                      {notif.timestamp?.seconds
                         ? new Date(
                             notif.timestamp.seconds * 1000
                           ).toLocaleString()
@@ -203,7 +210,7 @@ const NotificationPage = () => {
         </div>
       </div>
 
-      {/* ✅ Fire Alert Modal */}
+      {/* 🔥 Alert Modal */}
       {showModal && selectedNotif && (
         <div className={styles.modalOverlay} onClick={handleCloseModal}>
           <div
@@ -219,7 +226,7 @@ const NotificationPage = () => {
             </p>
             <p>
               <strong>Date & Time:</strong>{" "}
-              {selectedNotif.timestamp
+              {selectedNotif.timestamp?.seconds
                 ? new Date(
                     selectedNotif.timestamp.seconds * 1000
                   ).toLocaleString()
@@ -249,10 +256,7 @@ const NotificationPage = () => {
             </p>
 
             <div className={styles.modalActions}>
-              <button
-                className={styles.dispatchBtn}
-                onClick={fetchResponders}
-              >
+              <button className={styles.dispatchBtn} onClick={fetchResponders}>
                 🚒 Dispatch
               </button>
               <button className={styles.closeBtn} onClick={handleCloseModal}>
@@ -265,14 +269,19 @@ const NotificationPage = () => {
 
       {/* 🚨 Dispatch Responders Modal */}
       {showDispatchModal && (
-        <div className={styles.modalOverlay} onClick={() => setShowDispatchModal(false)}>
+        <div
+          className={styles.modalOverlay}
+          onClick={() => setShowDispatchModal(false)}
+        >
           <div
             className={`${styles.modalContent} ${styles.dispatchModal}`}
             onClick={(e) => e.stopPropagation()}
           >
             <div className={styles.dispatchHeader}>
               <h3>🚒 Dispatch Responders</h3>
-              <p className={styles.subText}>Select a responder to assign this alert.</p>
+              <p className={styles.subText}>
+                Select a responder to assign this alert.
+              </p>
             </div>
 
             <div className={styles.responderList}>
@@ -283,8 +292,12 @@ const NotificationPage = () => {
                   <div key={responder.id} className={styles.responderCard}>
                     <div className={styles.responderInfo}>
                       <p className={styles.responderName}>{responder.name}</p>
-                      <p className={styles.responderEmail}>{responder.email}</p>
-                      <p className={styles.responderContact}>📞 {responder.contact}</p>
+                      <p className={styles.responderEmail}>
+                        {responder.email}
+                      </p>
+                      <p className={styles.responderContact}>
+                        📞 {responder.contact}
+                      </p>
                     </div>
                     <button
                       className={styles.dispatchNowBtn}
