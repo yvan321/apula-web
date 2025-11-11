@@ -11,6 +11,15 @@ import {
 } from "react-icons/fa";
 import AdminHeader from "@/components/shared/adminHeader";
 import styles from "./reportStyles.module.css";
+import {
+  collection,
+  query,
+  orderBy,
+  onSnapshot,
+  updateDoc,
+  doc,
+} from "firebase/firestore";
+import { db } from "@/lib/firebase";
 
 const ReportPage = () => {
   const [reports, setReports] = useState([]);
@@ -20,81 +29,56 @@ const ReportPage = () => {
   const [editMode, setEditMode] = useState(false);
   const [editedStatus, setEditedStatus] = useState("");
 
-  // ✅ Simulated Data
+  // ✅ Real-time Firestore data
   useEffect(() => {
-    const mockData = [
-      {
-        id: 1,
-        name: "John Doe",
-        contact: "09123456789",
-        email: "johndoe@gmail.com",
-        address: "Bacoor, Cavite",
-        description: "Fire near the kitchen area.",
-        status: "Pending",
-        date: "2025-10-18 14:25",
-      },
-      {
-        id: 2,
-        name: "Jane Smith",
-        contact: "09987654321",
-        email: "janesmith@gmail.com",
-        address: "Imus, Cavite",
-        description: "Smoke detected in the living room.",
-        status: "Acknowledged",
-        date: "2025-10-18 09:40",
-      },
-      {
-        id: 3,
-        name: "Carlos Reyes",
-        contact: "09112223333",
-        email: "carlosreyes@gmail.com",
-        address: "Dasmariñas, Cavite",
-        description: "Small fire in the warehouse.",
-        status: "Resolved",
-        date: "2025-10-17 19:15",
-      },
-    ];
-    setReports(mockData);
-    setFilteredReports(mockData);
+    const q = query(collection(db, "alerts"), orderBy("timestamp", "desc"));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const data = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+      setReports(data);
+      setFilteredReports(data);
+    });
+    return () => unsubscribe();
   }, []);
 
-  // ✅ Search
+  // ✅ Search filter
   useEffect(() => {
     const result = reports.filter(
       (r) =>
-        r.name.toLowerCase().includes(search.toLowerCase()) ||
-        r.address.toLowerCase().includes(search.toLowerCase()) ||
-        r.description.toLowerCase().includes(search.toLowerCase())
+        r.userName?.toLowerCase().includes(search.toLowerCase()) ||
+        r.userAddress?.toLowerCase().includes(search.toLowerCase())
+      // || r.description?.toLowerCase().includes(search.toLowerCase()) // 🔸 Commented out
     );
     setFilteredReports(result);
   }, [search, reports]);
 
-  // ✅ Open Report Modal
-  const openReport = (report) => {
-    setSelectedReport(report);
-  };
+  // ✅ Open modal
+  const openReport = (report) => setSelectedReport(report);
 
-  // ✅ Close Modal
+  // ✅ Close modal
   const closeModal = () => {
     setSelectedReport(null);
     setEditMode(false);
   };
 
-  // ✅ Enable Edit Mode (Status Only)
+  // ✅ Edit mode toggle
   const handleEdit = () => {
     setEditMode(true);
     setEditedStatus(selectedReport.status);
   };
 
-  // ✅ Save Status Update
-  const handleSave = () => {
-    const updatedReports = reports.map((r) =>
-      r.id === selectedReport.id ? { ...r, status: editedStatus } : r
-    );
-    setReports(updatedReports);
-    setFilteredReports(updatedReports);
-    setSelectedReport({ ...selectedReport, status: editedStatus });
-    setEditMode(false);
+  // ✅ Save updated status to Firestore
+  const handleSave = async () => {
+    try {
+      const ref = doc(db, "alerts", selectedReport.id);
+      await updateDoc(ref, { status: editedStatus });
+      setEditMode(false);
+      alert("✅ Status updated successfully!");
+    } catch (error) {
+      console.error("❌ Failed to update status:", error);
+    }
   };
 
   return (
@@ -105,7 +89,7 @@ const ReportPage = () => {
           <h2 className={styles.pageTitle}>Incident Reports</h2>
           <hr className={styles.separator} />
 
-          {/* 🔍 Search */}
+          {/* 🔍 Search bar */}
           <div className={styles.filters}>
             <div className={styles.searchWrapper}>
               <input
@@ -123,19 +107,25 @@ const ReportPage = () => {
             {filteredReports.length > 0 ? (
               filteredReports.map((report) => (
                 <div key={report.id} className={styles.cardItem}>
-                  <h3>{report.name}</h3>
+                  <h3>{report.userName || "Unknown User"}</h3>
                   <p>
-                    <FaMapMarkerAlt /> {report.address}
+                    <FaMapMarkerAlt /> {report.userAddress || "No address"}
                   </p>
+
+                  {/* 🗒️ Description commented out */}
+                  {/*
                   <p>
-                    <FaClipboardList /> {report.description}
+                    <FaClipboardList />{" "}
+                    {report.description || "No description provided."}
                   </p>
+                  */}
+
                   <p
                     className={`${styles.status} ${
-                      styles[report.status.toLowerCase()]
+                      styles[report.status?.toLowerCase() || "pending"]
                     }`}
                   >
-                    {report.status}
+                    {report.status || "Pending"}
                   </p>
                   <button
                     className={styles.viewBtn}
@@ -151,7 +141,7 @@ const ReportPage = () => {
           </div>
         </div>
 
-        {/* 🪟 View Modal */}
+        {/* 🪟 Modal */}
         {selectedReport && (
           <div className={styles.modalOverlay}>
             <div className={styles.modalContent}>
@@ -163,36 +153,47 @@ const ReportPage = () => {
                   <h3 className={styles.modalTitle}>Report Details</h3>
                   <div className={styles.modalDetails}>
                     <p>
-                      <FaUser /> <strong>Name:</strong> {selectedReport.name}
+                      <FaUser /> <strong>Name:</strong>{" "}
+                      {selectedReport.userName || "N/A"}
                     </p>
                     <p>
                       <FaPhone /> <strong>Contact:</strong>{" "}
-                      {selectedReport.contact}
+                      {selectedReport.userContact || "N/A"}
                     </p>
                     <p>
                       <FaEnvelope /> <strong>Email:</strong>{" "}
-                      {selectedReport.email}
+                      {selectedReport.userEmail || "N/A"}
                     </p>
                     <p>
                       <FaMapMarkerAlt /> <strong>Address:</strong>{" "}
-                      {selectedReport.address}
+                      {selectedReport.userAddress || "N/A"}
                     </p>
+
+                    {/* 🗒️ Description commented out */}
+                    {/*
                     <p>
                       <FaClipboardList /> <strong>Description:</strong>{" "}
-                      {selectedReport.description}
+                      {selectedReport.description || "N/A"}
                     </p>
+                    */}
+
                     <p>
                       <strong>Status:</strong>{" "}
                       <span
                         className={`${styles.status} ${
-                          styles[selectedReport.status.toLowerCase()]
+                          styles[selectedReport.status?.toLowerCase() || "pending"]
                         }`}
                       >
-                        {selectedReport.status}
+                        {selectedReport.status || "Pending"}
                       </span>
                     </p>
                     <p>
-                      <strong>Date:</strong> {selectedReport.date}
+                      <strong>Date:</strong>{" "}
+                      {selectedReport.timestamp
+                        ? new Date(
+                            selectedReport.timestamp.seconds * 1000
+                          ).toLocaleString()
+                        : "Unknown"}
                     </p>
                   </div>
                   <button className={styles.closeBtn} onClick={closeModal}>

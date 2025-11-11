@@ -253,7 +253,7 @@ const NotificationPage = () => {
                 className={styles.dispatchBtn}
                 onClick={fetchResponders}
               >
-                🚒 Dispatch Responders
+                🚒 Dispatch
               </button>
               <button className={styles.closeBtn} onClick={handleCloseModal}>
                 Close
