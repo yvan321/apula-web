@@ -48,17 +48,15 @@ const DispatchPage: React.FC = () => {
   }, []);
 
   // 🔥 UPDATE responder → Available if dispatch is resolved
-  useEffect(() => {
-    const unsub = onSnapshot(collection(db, "dispatches"), (snap) => {
-      snap.docs.forEach(async (docSnap) => {
-        const dispatch = docSnap.data();
+ useEffect(() => {
+  const unsub = onSnapshot(collection(db, "dispatches"), (snap) => {
+    snap.docs.forEach(async (docSnap) => {
+      const dispatch = docSnap.data();
 
-        if (dispatch.status === "Resolved" && dispatch.responderEmail) {
-          const q = query(
-            collection(db, "users"),
-            where("email", "==", dispatch.responderEmail.toLowerCase())
-          );
-
+      // Only free responders IF dispatch is confirmed RESOLVED
+      if (dispatch.status === "Resolved" && dispatch.responderEmails?.length > 0) {
+        for (const email of dispatch.responderEmails) {
+          const q = query(collection(db, "users"), where("email", "==", email));
           const resSnap = await getDocs(q);
           resSnap.forEach(async (resDoc) => {
             await updateDoc(doc(db, "users", resDoc.id), {
@@ -66,11 +64,13 @@ const DispatchPage: React.FC = () => {
             });
           });
         }
-      });
+      }
     });
+  });
 
-    return () => unsub();
-  }, []);
+  return () => unsub();
+}, []);
+
 
   // 🔥 FILTER responders
   const filteredResponders = responders.filter((r) => {
