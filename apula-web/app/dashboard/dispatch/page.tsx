@@ -12,67 +12,47 @@ import {
   orderBy,
   limit,
   getDocs,
-  addDoc,
   doc,
   updateDoc,
   onSnapshot,
   serverTimestamp,
+  writeBatch,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
 const DispatchPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [responders, setResponders] = useState<any[]>([]);
-  const [selectedResponder, setSelectedResponder] = useState<any>(null);
-  const [dispatchInfo, setDispatchInfo] = useState<any>(null);
   const [alerts, setAlerts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showAlertModal, setShowAlertModal] = useState(false);
 
-  // 🔥 LIVE RESPONDER LISTENER
+  const [selectedAlert, setSelectedAlert] = useState<any>(null);
+  const [showResponderModal, setShowResponderModal] = useState(false);
+
+  const [selectedResponderIds, setSelectedResponderIds] = useState<Set<string>>(new Set());
+  const [selectAll, setSelectAll] = useState(false);
+
+  const [selectedResponderView, setSelectedResponderView] = useState<any>(null);
+  const [dispatchInfo, setDispatchInfo] = useState<any>(null);
+
+  // -------------------------------------------------------------------
+  // 🔥 REAL-TIME RESPONDER LISTENER
+  // -------------------------------------------------------------------
   useEffect(() => {
     const unsub = onSnapshot(
-      collection(db, "users"),
+      query(collection(db, "users"), where("role", "==", "responder")),
       (snap) => {
-        const data = snap.docs
-          .map((d) => ({ id: d.id, ...d.data() }))
-          .filter((u: any) => u.role?.toLowerCase() === "responder");
-
-        setResponders(data);
+        setResponders(snap.docs.map((doc) => ({ id: doc.id, ...doc.data() })));
         setLoading(false);
-      },
-      (err) => console.error("users listener error:", err)
+      }
     );
 
     return () => unsub();
   }, []);
 
-  // 🔥 UPDATE responder → Available if dispatch is resolved
- useEffect(() => {
-  const unsub = onSnapshot(collection(db, "dispatches"), (snap) => {
-    snap.docs.forEach(async (docSnap) => {
-      const dispatch = docSnap.data();
-
-      // Only free responders IF dispatch is confirmed RESOLVED
-      if (dispatch.status === "Resolved" && dispatch.responderEmails?.length > 0) {
-        for (const email of dispatch.responderEmails) {
-          const q = query(collection(db, "users"), where("email", "==", email));
-          const resSnap = await getDocs(q);
-          resSnap.forEach(async (resDoc) => {
-            await updateDoc(doc(db, "users", resDoc.id), {
-              status: "Available",
-            });
-          });
-        }
-      }
-    });
-  });
-
-  return () => unsub();
-}, []);
-
-
-  // 🔥 FILTER responders
+  // -------------------------------------------------------------------
+  // 🔍 SEARCH FILTER
+  // -------------------------------------------------------------------
   const filteredResponders = responders.filter((r) => {
     const term = searchTerm.toLowerCase();
     return (
@@ -82,105 +62,167 @@ const DispatchPage: React.FC = () => {
     );
   });
 
-  // 🔥 Fetch only PENDING alerts
-  const fetchAlerts = async (responder: any) => {
-    setSelectedResponder(responder);
-    setShowAlertModal(true);
-
-    try {
-      const q = query(
+  // -------------------------------------------------------------------
+  // 🔥 FETCH ALERTS FOR DISPATCH
+  // -------------------------------------------------------------------
+  const openAlertModal = async () => {
+    const snap = await getDocs(
+      query(
         collection(db, "alerts"),
         where("status", "==", "Pending"),
         orderBy("timestamp", "desc")
-      );
+      )
+    );
 
-      const snap = await getDocs(q);
-      const data = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-      setAlerts(data);
-    } catch (error) {
-      console.error("fetchAlerts error:", error);
-      setAlerts([]);
+    const pending = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+
+    if (pending.length === 0) {
+      window.alert("No pending alerts found.");
+      return;
+    }
+
+    setAlerts(pending);
+  };
+
+  const handleDispatchClick = () => {
+    openAlertModal();
+    setSelectedAlert(null);
+    setShowResponderModal(false);
+  };
+
+  const selectAlertForDispatch = (alert: any) => {
+    setSelectedAlert(alert);
+    setSelectedResponderIds(new Set());
+    setSelectAll(false);
+    setShowResponderModal(true);
+  };
+
+  // -------------------------------------------------------------------
+  // ✔ MULTI SELECT
+  // -------------------------------------------------------------------
+  const toggleResponder = (id: string) => {
+    setSelectedResponderIds((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (!selectAll) {
+      setSelectedResponderIds(new Set(responders.map((r) => r.id)));
+      setSelectAll(true);
+    } else {
+      setSelectedResponderIds(new Set());
+      setSelectAll(false);
     }
   };
 
-  // 🔥 Assign responder
-  const assignDispatch = async (alertItem: any) => {
-    if (!selectedResponder) return;
+  // -------------------------------------------------------------------
+  // 🚑 MULTI DISPATCH – BATCH WRITE
+  // -------------------------------------------------------------------
+  const dispatchResponders = async () => {
+    if (!selectedAlert) return;
+    if (selectedResponderIds.size === 0) {
+      window.alert("Please select at least one responder.");
+      return;
+    }
 
     try {
-      await addDoc(collection(db, "dispatches"), {
-        alertId: alertItem.id,
-        alertType: alertItem.type || "Fire Detected",
-        alertLocation: alertItem.location || "Unknown",
-        userReported: alertItem.userName || "Unknown",
-        userAddress: alertItem.userAddress || "Unknown",
-        userContact: alertItem.userContact || "Unknown",
-        responderId: selectedResponder.id,
-        responderName: selectedResponder.name,
-        responderEmail: selectedResponder.email.toLowerCase(),
-        responderContact: selectedResponder.contact || "",
-        dispatchedBy: "Admin Panel",
+      const batch = writeBatch(db);
+
+      const respondersList = responders.filter((r) =>
+        selectedResponderIds.has(r.id)
+      );
+      const responderEmails = respondersList.map((r) => r.email.toLowerCase());
+
+      const dispatchRef = doc(collection(db, "dispatches"));
+
+      batch.set(dispatchRef, {
+        alertId: selectedAlert.id,
+        alertType: selectedAlert.type,
+        alertLocation: selectedAlert.location,
+
+        responders: respondersList.map((r) => ({
+          id: r.id,
+          name: r.name,
+          email: r.email.toLowerCase(),
+          contact: r.contact || "",
+        })),
+
+        responderEmails,
+        userReported: selectedAlert.userName,
+        userAddress: selectedAlert.userAddress,
+        userContact: selectedAlert.userContact,
+        userEmail: selectedAlert.userEmail,
+
         status: "Dispatched",
         timestamp: serverTimestamp(),
+        dispatchedBy: "Admin Panel",
       });
 
-      // update responder in DB
-      await updateDoc(doc(db, "users", selectedResponder.id), {
-        status: "Dispatched",
+      respondersList.forEach((r) => {
+        batch.update(doc(db, "users", r.id), { status: "Dispatched" });
       });
 
-      // update alert
-      await updateDoc(doc(db, "alerts", alertItem.id), {
-        status: "Dispatched",
-      });
+      batch.update(doc(db, "alerts", selectedAlert.id), { status: "Dispatched" });
 
-      // 🔥 UI Instant update (fix for dispatch button not switching)
-      setResponders((prev) =>
-        prev.map((r) =>
-          r.id === selectedResponder.id
-            ? { ...r, status: "Dispatched" }
-            : r
-        )
-      );
+      await batch.commit();
 
-      window.alert(`Responder ${selectedResponder.name} dispatched!`);
+      window.alert("Dispatch completed successfully!");
 
-      setShowAlertModal(false);
-      setSelectedResponder(null);
-    } catch (error) {
-      console.error("assignDispatch error:", error);
-      window.alert("Failed to assign responder.");
+      setShowResponderModal(false);
+      setAlerts([]);
+    } catch (err) {
+      console.error(err);
+      window.alert("Error dispatching responders.");
     }
   };
 
-  // 🔥 Show latest dispatch info
-  const openModal = async (responder: any) => {
-    setSelectedResponder(responder);
+  // -------------------------------------------------------------------
+  // 👁 VIEW DISPATCH MODAL
+  // -------------------------------------------------------------------
+  const openViewModal = async (responder: any) => {
+    setSelectedResponderView(responder);
     setDispatchInfo(null);
 
-    try {
-      const q = query(
+    const snap = await getDocs(
+      query(
         collection(db, "dispatches"),
-        where("responderEmail", "==", responder.email.toLowerCase()),
+        where("responderEmails", "array-contains", responder.email.toLowerCase()),
         orderBy("timestamp", "desc"),
         limit(1)
-      );
+      )
+    );
 
-      const snap = await getDocs(q);
-      if (!snap.empty) {
-        setDispatchInfo(snap.docs[0].data());
-      }
-    } catch (error) {
-      console.error("openModal error:", error);
+    if (!snap.empty) {
+      setDispatchInfo(snap.docs[0].data());
     }
   };
 
-  const closeModal = () => {
-    setSelectedResponder(null);
+  const closeView = () => {
+    setSelectedResponderView(null);
     setDispatchInfo(null);
-    setShowAlertModal(false);
   };
 
+  // -------------------------------------------------------------------
+  // 🔄 RESET RESPONDERS
+  // -------------------------------------------------------------------
+  const resetAllResponders = async () => {
+    const snap = await getDocs(
+      query(collection(db, "users"), where("role", "==", "responder"))
+    );
+
+    snap.forEach((u) =>
+      updateDoc(doc(db, "users", u.id), { status: "Available" })
+    );
+
+    window.alert("All responders reset to Available.");
+  };
+
+  // -------------------------------------------------------------------
+  // UI
+  // -------------------------------------------------------------------
   return (
     <div>
       <AdminHeader />
@@ -190,24 +232,26 @@ const DispatchPage: React.FC = () => {
           <h2 className={styles.pageTitle}>Responder Dispatch</h2>
           <hr className={styles.separator} />
 
-          {/* Search Bar */}
+          {/* SEARCH */}
           <div className={styles.filters}>
             <div className={styles.searchWrapper}>
-              <FaSearch className={styles.searchIcon} size={18} />
+              <FaSearch className={styles.searchIcon} />
               <input
                 type="text"
-                placeholder="Search responder..."
+                placeholder="Search responder…"
                 className={styles.searchInput}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
+
+         
           </div>
 
-          {/* Table */}
+          {/* TABLE */}
           <div className={styles.tableSection}>
             {loading ? (
-              <p>Loading responders...</p>
+              <p>Loading responders…</p>
             ) : (
               <table className={styles.userTable}>
                 <thead>
@@ -217,17 +261,18 @@ const DispatchPage: React.FC = () => {
                     <th>Email</th>
                     <th>Address</th>
                     <th>Status</th>
-                    <th>Actions</th>
+                    <th>Action</th>
                   </tr>
                 </thead>
 
                 <tbody>
                   {filteredResponders.map((r) => (
                     <tr key={r.id}>
-                      <td>{r.id.slice(0, 6)}...</td>
+                      <td>{r.id.slice(0, 6)}…</td>
                       <td>{r.name}</td>
                       <td>{r.email}</td>
                       <td>{r.address}</td>
+
                       <td>
                         <span
                           className={
@@ -244,14 +289,14 @@ const DispatchPage: React.FC = () => {
                         {r.status === "Available" ? (
                           <button
                             className={styles.dispatchBtn}
-                            onClick={() => fetchAlerts(r)}
+                            onClick={() => handleDispatchClick()}
                           >
                             <FaTruck /> Dispatch
                           </button>
                         ) : (
                           <button
                             className={styles.viewBtn}
-                            onClick={() => openModal(r)}
+                            onClick={() => openViewModal(r)}
                           >
                             <FaEye /> View
                           </button>
@@ -266,26 +311,26 @@ const DispatchPage: React.FC = () => {
         </div>
       </div>
 
-      {/* VIEW DISPATCH MODAL */}
-      {selectedResponder && dispatchInfo && (
-        <div className={styles.modalOverlay} onClick={closeModal}>
-          <div
-            className={styles.modalContent}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h3 className={styles.modalTitle}>Responder Information</h3>
+      {/* VIEW MODAL */}
+      {selectedResponderView && dispatchInfo && (
+        <div className={styles.modalOverlay} onClick={closeView}>
+          <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
+            <h3 className={styles.modalTitle}>Responder Dispatch Info</h3>
 
-            <p><strong>Name:</strong> {selectedResponder.name}</p>
-            <p><strong>Email:</strong> {selectedResponder.email}</p>
-            <p><strong>Contact:</strong> {selectedResponder.contact}</p>
+            <p><strong>Name:</strong> {selectedResponderView.name}</p>
+            <p><strong>Email:</strong> {selectedResponderView.email}</p>
+            <p><strong>Contact:</strong> {selectedResponderView.contact}</p>
 
             <hr />
             <h4>🚨 Latest Dispatch</h4>
+
             <p><strong>Alert:</strong> {dispatchInfo.alertType}</p>
             <p><strong>Location:</strong> {dispatchInfo.alertLocation}</p>
+
             <p><strong>Reporter:</strong> {dispatchInfo.userReported}</p>
-            <p><strong>Reporter Address:</strong> {dispatchInfo.userAddress}</p>
             <p><strong>Reporter Contact:</strong> {dispatchInfo.userContact}</p>
+            <p><strong>Reporter Address:</strong> {dispatchInfo.userAddress}</p>
+            <p><strong>Reporter Email:</strong> {dispatchInfo.userEmail}</p>
 
             <p>
               <strong>Timestamp:</strong>{" "}
@@ -294,49 +339,73 @@ const DispatchPage: React.FC = () => {
                 : "N/A"}
             </p>
 
-            <button className={styles.closeBtn} onClick={closeModal}>
+            <button className={styles.closeBtn} onClick={closeView}>Close</button>
+          </div>
+        </div>
+      )}
+
+      {/* ALERT MODAL */}
+      {alerts.length > 0 && !showResponderModal && selectedAlert === null && (
+        <div className={styles.modalOverlay} onClick={() => setAlerts([])}>
+          <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
+            <h3 className={styles.modalTitle}>Select Alert</h3>
+
+            {alerts.map((alert) => (
+  <div key={alert.id} className={styles.alertCard}>
+    <h4>{alert.type}</h4>
+
+    <p><strong>Location:</strong> {alert.location}</p>
+    <p><strong>Reporter:</strong> {alert.userName}</p>
+
+    <p><strong>Reporter Contact:</strong> {alert.userContact || "No contact provided"}</p>
+    <p><strong>Reporter Email:</strong> {alert.userEmail || "No email provided"}</p>
+    <p><strong>Reporter Address:</strong> {alert.userAddress || "No address provided"}</p>
+
+    <button
+      className={styles.assignBtn}
+      onClick={() => selectAlertForDispatch(alert)}
+    >
+      Select
+    </button>
+  </div>
+))}
+
+
+            <button className={styles.closeBtn} onClick={() => setAlerts([])}>
               Close
             </button>
           </div>
         </div>
       )}
 
-      {/* ALERT SELECTION MODAL */}
-      {showAlertModal && (
-        <div
-          className={styles.modalOverlay}
-          onClick={() => setShowAlertModal(false)}
-        >
-          <div
-            className={`${styles.modalContent} ${styles.alertModal}`}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h3 className={styles.modalTitle}>Select Alert to Dispatch</h3>
+      {/* RESPONDER SELECT MODAL */}
+      {showResponderModal && (
+        <div className={styles.modalOverlay} onClick={() => setShowResponderModal(false)}>
+          <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
+            <h3 className={styles.modalTitle}>Select Responders</h3>
 
-            {alerts.length > 0 ? (
-              alerts.map((alert) => (
-                <div key={alert.id} className={styles.alertCard}>
-                  <h4>{alert.type || "Fire Alert"}</h4>
-                  <p><strong>Location:</strong> {alert.location}</p>
-                  <p><strong>Reporter:</strong> {alert.userName}</p>
-                  <p><strong>Status:</strong> {alert.status}</p>
+            <label>
+              <input type="checkbox" checked={selectAll} onChange={toggleSelectAll} /> Select All
+            </label>
 
-                  <button
-                    className={styles.assignBtn}
-                    onClick={() => assignDispatch(alert)}
-                  >
-                    Assign
-                  </button>
-                </div>
-              ))
-            ) : (
-              <p>No pending alerts found.</p>
-            )}
+            <div className={styles.responderList}>
+              {responders.map((r) => (
+                <label key={r.id} className={styles.responderCard}>
+                  <input
+                    type="checkbox"
+                    checked={selectedResponderIds.has(r.id)}
+                    onChange={() => toggleResponder(r.id)}
+                  />
+                  {r.name} — {r.email}
+                </label>
+              ))}
+            </div>
 
-            <button
-              className={styles.closeBtn}
-              onClick={() => setShowAlertModal(false)}
-            >
+            <button className={styles.assignBtn} onClick={dispatchResponders}>
+              Dispatch Selected
+            </button>
+
+            <button className={styles.closeBtn} onClick={() => setShowResponderModal(false)}>
               Close
             </button>
           </div>

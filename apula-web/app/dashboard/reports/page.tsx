@@ -7,7 +7,6 @@ import {
   FaEnvelope,
   FaPhone,
   FaMapMarkerAlt,
-  FaClipboardList,
 } from "react-icons/fa";
 import AdminHeader from "@/components/shared/adminHeader";
 import styles from "./reportStyles.module.css";
@@ -18,8 +17,6 @@ import {
   onSnapshot,
   updateDoc,
   doc,
-  getDocs,
-  where,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
@@ -31,7 +28,7 @@ const ReportPage = () => {
   const [editMode, setEditMode] = useState(false);
   const [editedStatus, setEditedStatus] = useState("");
 
-  // ✅ Real-time listener for Alerts
+  // 🔥 Real-time listener for Alerts
   useEffect(() => {
     const q = query(collection(db, "alerts"), orderBy("timestamp", "desc"));
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -42,35 +39,11 @@ const ReportPage = () => {
       setReports(data);
       setFilteredReports(data);
     });
-    return () => unsubscribe();
-  }, []);
-
-  // ✅ 🔄 Auto-sync with Dispatches: when a dispatch is resolved, update its alert
-  useEffect(() => {
-    const dispatchesRef = collection(db, "dispatches");
-    const unsubscribe = onSnapshot(dispatchesRef, async (snapshot) => {
-      snapshot.docChanges().forEach(async (change) => {
-        if (change.type === "modified") {
-          const dispatch = change.doc.data();
-
-          // Only handle Resolved ones
-          if (dispatch.status === "Resolved" && dispatch.alertId) {
-            try {
-              const alertRef = doc(db, "alerts", dispatch.alertId);
-              await updateDoc(alertRef, { status: "Resolved" });
-              console.log(`✅ Synced alert ${dispatch.alertId} -> Resolved`);
-            } catch (error) {
-              console.error("⚠️ Failed to sync alert:", error);
-            }
-          }
-        }
-      });
-    });
 
     return () => unsubscribe();
   }, []);
 
-  // ✅ Search filter
+  // 🔍 Search filter
   useEffect(() => {
     const result = reports.filter(
       (r) =>
@@ -80,26 +53,27 @@ const ReportPage = () => {
     setFilteredReports(result);
   }, [search, reports]);
 
-  // ✅ Open modal
+  // Open a modal for a report
   const openReport = (report) => setSelectedReport(report);
 
-  // ✅ Close modal
+  // Close modal
   const closeModal = () => {
     setSelectedReport(null);
     setEditMode(false);
   };
 
-  // ✅ Edit mode toggle
+  // Enter Edit Mode
   const handleEdit = () => {
     setEditMode(true);
     setEditedStatus(selectedReport.status);
   };
 
-  // ✅ Save updated status manually (still optional)
+  // Save updated status
   const handleSave = async () => {
     try {
       const ref = doc(db, "alerts", selectedReport.id);
       await updateDoc(ref, { status: editedStatus });
+
       setEditMode(false);
       alert("✅ Status updated successfully!");
     } catch (error) {
@@ -110,12 +84,13 @@ const ReportPage = () => {
   return (
     <div>
       <AdminHeader />
+
       <div className={styles.container}>
         <div className={styles.contentSection}>
           <h2 className={styles.pageTitle}>Incident Reports</h2>
           <hr className={styles.separator} />
 
-          {/* 🔍 Search bar */}
+          {/* Search Bar */}
           <div className={styles.filters}>
             <div className={styles.searchWrapper}>
               <input
@@ -128,7 +103,7 @@ const ReportPage = () => {
             </div>
           </div>
 
-          {/* 🧾 Report Cards */}
+          {/* Report Cards */}
           <div className={styles.cardGrid}>
             {filteredReports.length > 0 ? (
               filteredReports.map((report) => (
@@ -145,6 +120,7 @@ const ReportPage = () => {
                   >
                     {report.status || "Pending"}
                   </p>
+
                   <button
                     className={styles.viewBtn}
                     onClick={() => openReport(report)}
@@ -159,7 +135,7 @@ const ReportPage = () => {
           </div>
         </div>
 
-        {/* 🪟 Modal */}
+        {/* Modal */}
         {selectedReport && (
           <div className={styles.modalOverlay}>
             <div className={styles.modalContent}>
@@ -168,7 +144,9 @@ const ReportPage = () => {
                   <button className={styles.editBtn} onClick={handleEdit}>
                     ✏️ Edit
                   </button>
+
                   <h3 className={styles.modalTitle}>Report Details</h3>
+
                   <div className={styles.modalDetails}>
                     <p>
                       <FaUser /> <strong>Name:</strong>{" "}
@@ -199,6 +177,7 @@ const ReportPage = () => {
                         {selectedReport.status || "Pending"}
                       </span>
                     </p>
+
                     <p>
                       <strong>Date:</strong>{" "}
                       {selectedReport.timestamp
@@ -208,6 +187,7 @@ const ReportPage = () => {
                         : "Unknown"}
                     </p>
                   </div>
+
                   <button className={styles.closeBtn} onClick={closeModal}>
                     Close
                   </button>
@@ -215,17 +195,21 @@ const ReportPage = () => {
               ) : (
                 <>
                   <h3 className={styles.modalTitle}>Edit Status</h3>
+
                   <div className={styles.editForm}>
                     <label htmlFor="status">Status</label>
+
+                    {/* UPDATED VALUES BELOW */}
                     <select
                       id="status"
                       value={editedStatus}
                       onChange={(e) => setEditedStatus(e.target.value)}
                     >
                       <option value="Pending">Pending</option>
-                      <option value="Acknowledged">Acknowledged</option>
+                      <option value="Dispatched">Dispatched</option>
                       <option value="Resolved">Resolved</option>
                     </select>
+
                     <div className={styles.editActions}>
                       <button className={styles.saveBtn} onClick={handleSave}>
                         Save
