@@ -1,41 +1,61 @@
+/* MAIN */
+
+
 .container {
   padding: 20px;
+  background-color: w;
+}
+
+.pageWrapper {
+  background: #e4e4e4;          /* light gray background */
+  min-height: 100vh;
+
+}
+
+.contentSection {
   background: #fff;
-  border-radius: 10px;
+  padding: 20px;
+  border-radius: 12px;
+  box-shadow: 0 2px 6px rgba(255, 255, 255, 0.08);
 }
 
 .pageTitle {
-  font-size: 1.5rem;
-  font-weight: 700;
   color: #800000;
+  font-size: 1.6rem;
+  font-weight: 700;
 }
 
 .separator {
-  border: 1px solid #ddd;
   margin: 10px 0;
+  border: 0;
+  border-top: 1px solid #ddd;
 }
 
+/* SEARCH BAR */
 .searchWrapper {
-  display: flex;
-  align-items: center;
   position: relative;
+  width: 300px;
   margin-bottom: 15px;
 }
 
 .searchIcon {
   position: absolute;
+  top: 50%;
   left: 10px;
+  transform: translateY(-50%);
   color: #777;
 }
 
 .searchInput {
-  width: 300px;
+  width: 100%;
   padding: 10px 10px 10px 35px;
   border: 1px solid #ccc;
   border-radius: 20px;
   outline: none;
+  font-size: 0.95rem;
 }
 
+/* RESPONDER TABLE */
 .userTable {
   width: 100%;
   border-collapse: collapse;
@@ -43,8 +63,8 @@
 }
 
 .userTable th {
-  background-color: #8b0000;
-  color: white;
+  background: #8b0000;
+  color: #fff;
   padding: 10px;
   text-align: left;
 }
@@ -56,109 +76,167 @@
 
 .statusAvailable {
   color: #28a745;
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .statusDispatched {
   color: #dc3545;
-  font-weight: 600;
+  font-weight: 700;
 }
 
-/* Buttons */
+/* ACTION BUTTONS */
 .dispatchBtn {
-  background-color: #28a745;
+  background: #28a745;
   color: white;
   border: none;
   padding: 6px 10px;
   border-radius: 6px;
-  font-weight: 500;
   cursor: pointer;
-  display: inline-flex;
+  font-weight: 600;
+  display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
 }
 
 .viewBtn {
-  background-color: #f89c1b;
+  background: #f89c1b;
   color: white;
   border: none;
   padding: 6px 10px;
   border-radius: 6px;
-  font-weight: 500;
   cursor: pointer;
-  display: inline-flex;
+  font-weight: 600;
+  display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
 }
 
-/* Modal */
+/* MODAL BASE */
 .modalOverlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(0,0,0,0.5);
   display: flex;
   justify-content: center;
   align-items: center;
+  padding: 10px;
+  z-index: 9999;
 }
 
 .modalContent {
   background: #fff;
   padding: 20px;
-  border-radius: 10px;
+  border-radius: 12px;
   width: 400px;
-  max-width: 90%;
+  max-width: 95%;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.2);
 }
 
+.modalWide {
+  background: #fff;
+  padding: 20px;
+  border-radius: 12px;
+  width: 80%;
+  max-width: 900px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.25);
+}
+
+/* MODAL TITLES */
 .modalTitle {
-  font-size: 1.2rem;
-  color: #8b0000;
-  font-weight: bold;
-  margin-bottom: 10px;
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: #800000;
+  margin-bottom: 15px;
 }
 
-.modalDetails p {
-  margin: 5px 0;
+/* SCROLLABLE AREA */
+.tableScroll {
+  max-height: 400px;
+  overflow-y: auto;
+  margin-bottom: 15px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
 }
 
-.closeBtn {
-  margin-top: 10px;
-  background: #8b0000;
+/* ALERT TABLE */
+.alertTable {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.alertTable th {
+  background: #800000;
+  color: #fff;
+  padding: 10px;
+  font-size: 0.9rem;
+}
+
+.alertTable td {
+  border-bottom: 1px solid #eee;
+  padding: 10px;
+  font-size: 0.9rem;
+}
+
+/* RESPONDER TABLE IN MODAL */
+.responderTable {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.responderTable th {
+  background: #800000;
+  color: #fff;
+  padding: 10px;
+}
+
+.responderTable td {
+  padding: 10px;
+  border-bottom: 1px solid #eee;
+}
+
+/* SELECT ALL */
+.selectAllRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  font-weight: 600;
+}
+
+/* BUTTONS */
+.assignBtn {
+  background: #c00;
   color: white;
   border: none;
-  border-radius: 5px;
-  padding: 8px 12px;
+  padding: 8px 14px;
+  border-radius: 6px;
   cursor: pointer;
-}
-
-.noResults {
-  text-align: center;
-  color: #777;
-  padding: 15px;
-}
-
-.alertModal {
-  max-height: 70vh;
-  overflow-y: auto;
-}
-
-.alertCard {
-  background: #fff;
-  padding: 16px;
-  margin-bottom: 10px;
-  border-radius: 10px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-}
-
-.assignBtn {
-  background: #e60000;
-  color: #fff;
-  border: none;
-  padding: 8px 12px;
-  border-radius: 8px;
-  cursor: pointer;
-  margin-top: 8px;
+  font-weight: 600;
 }
 
 .assignBtn:hover {
-  background: #b30000;
+  background: #9a0000;
+}
+
+.closeBtn {
+  background: #555;
+  color: white;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.modalActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+/* VIEW MODAL DETAILS */
+.modalDetails p {
+  margin: 5px 0;
+  font-size: 0.95rem;
 }

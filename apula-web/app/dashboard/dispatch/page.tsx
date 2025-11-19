@@ -35,9 +35,9 @@ const DispatchPage: React.FC = () => {
   const [selectedResponderView, setSelectedResponderView] = useState<any>(null);
   const [dispatchInfo, setDispatchInfo] = useState<any>(null);
 
-  // -------------------------------------------------------------------
-  // 🔥 REAL-TIME RESPONDER LISTENER
-  // -------------------------------------------------------------------
+  // ------------------------------------------------------------
+  // REAL-TIME RESPONDERS
+  // ------------------------------------------------------------
   useEffect(() => {
     const unsub = onSnapshot(
       query(collection(db, "users"), where("role", "==", "responder")),
@@ -50,9 +50,9 @@ const DispatchPage: React.FC = () => {
     return () => unsub();
   }, []);
 
-  // -------------------------------------------------------------------
-  // 🔍 SEARCH FILTER
-  // -------------------------------------------------------------------
+  // ------------------------------------------------------------
+  // SEARCH FILTER
+  // ------------------------------------------------------------
   const filteredResponders = responders.filter((r) => {
     const term = searchTerm.toLowerCase();
     return (
@@ -62,9 +62,9 @@ const DispatchPage: React.FC = () => {
     );
   });
 
-  // -------------------------------------------------------------------
-  // 🔥 FETCH ALERTS FOR DISPATCH
-  // -------------------------------------------------------------------
+  // ------------------------------------------------------------
+  // FETCH ALERTS (Pending Only)
+  // ------------------------------------------------------------
   const openAlertModal = async () => {
     const snap = await getDocs(
       query(
@@ -90,6 +90,9 @@ const DispatchPage: React.FC = () => {
     setShowResponderModal(false);
   };
 
+  // ------------------------------------------------------------
+  // SELECT ALERT → PROCEED TO RESPONDER SELECTION
+  // ------------------------------------------------------------
   const selectAlertForDispatch = (alert: any) => {
     setSelectedAlert(alert);
     setSelectedResponderIds(new Set());
@@ -97,9 +100,9 @@ const DispatchPage: React.FC = () => {
     setShowResponderModal(true);
   };
 
-  // -------------------------------------------------------------------
-  // ✔ MULTI SELECT
-  // -------------------------------------------------------------------
+  // ------------------------------------------------------------
+  // MULTI SELECT RESPONDERS
+  // ------------------------------------------------------------
   const toggleResponder = (id: string) => {
     setSelectedResponderIds((prev) => {
       const next = new Set(prev);
@@ -118,11 +121,12 @@ const DispatchPage: React.FC = () => {
     }
   };
 
-  // -------------------------------------------------------------------
-  // 🚑 MULTI DISPATCH – BATCH WRITE
-  // -------------------------------------------------------------------
+  // ------------------------------------------------------------
+  // DISPATCH SELECTED RESPONDERS
+  // ------------------------------------------------------------
   const dispatchResponders = async () => {
     if (!selectedAlert) return;
+
     if (selectedResponderIds.size === 0) {
       window.alert("Please select at least one responder.");
       return;
@@ -134,6 +138,7 @@ const DispatchPage: React.FC = () => {
       const respondersList = responders.filter((r) =>
         selectedResponderIds.has(r.id)
       );
+
       const responderEmails = respondersList.map((r) => r.email.toLowerCase());
 
       const dispatchRef = doc(collection(db, "dispatches"));
@@ -161,10 +166,12 @@ const DispatchPage: React.FC = () => {
         dispatchedBy: "Admin Panel",
       });
 
-      respondersList.forEach((r) => {
-        batch.update(doc(db, "users", r.id), { status: "Dispatched" });
-      });
+      // Update responders → Dispatched
+      respondersList.forEach((r) =>
+        batch.update(doc(db, "users", r.id), { status: "Dispatched" })
+      );
 
+      // Update alert → Dispatched
       batch.update(doc(db, "alerts", selectedAlert.id), { status: "Dispatched" });
 
       await batch.commit();
@@ -179,9 +186,9 @@ const DispatchPage: React.FC = () => {
     }
   };
 
-  // -------------------------------------------------------------------
-  // 👁 VIEW DISPATCH MODAL
-  // -------------------------------------------------------------------
+  // ------------------------------------------------------------
+  // VIEW DISPATCH INFO (for dispatched responders)
+  // ------------------------------------------------------------
   const openViewModal = async (responder: any) => {
     setSelectedResponderView(responder);
     setDispatchInfo(null);
@@ -195,9 +202,7 @@ const DispatchPage: React.FC = () => {
       )
     );
 
-    if (!snap.empty) {
-      setDispatchInfo(snap.docs[0].data());
-    }
+    if (!snap.empty) setDispatchInfo(snap.docs[0].data());
   };
 
   const closeView = () => {
@@ -205,26 +210,8 @@ const DispatchPage: React.FC = () => {
     setDispatchInfo(null);
   };
 
-  // -------------------------------------------------------------------
-  // 🔄 RESET RESPONDERS
-  // -------------------------------------------------------------------
-  const resetAllResponders = async () => {
-    const snap = await getDocs(
-      query(collection(db, "users"), where("role", "==", "responder"))
-    );
-
-    snap.forEach((u) =>
-      updateDoc(doc(db, "users", u.id), { status: "Available" })
-    );
-
-    window.alert("All responders reset to Available.");
-  };
-
-  // -------------------------------------------------------------------
-  // UI
-  // -------------------------------------------------------------------
   return (
-    <div>
+    <div className={styles.pageWrapper}>
       <AdminHeader />
 
       <div className={styles.container}>
@@ -233,85 +220,68 @@ const DispatchPage: React.FC = () => {
           <hr className={styles.separator} />
 
           {/* SEARCH */}
-          <div className={styles.filters}>
-            <div className={styles.searchWrapper}>
-              <FaSearch className={styles.searchIcon} />
-              <input
-                type="text"
-                placeholder="Search responder…"
-                className={styles.searchInput}
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </div>
-
-         
+          <div className={styles.searchWrapper}>
+            <FaSearch className={styles.searchIcon} />
+            <input
+              className={styles.searchInput}
+              type="text"
+              placeholder="Search responder…"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
           </div>
 
-          {/* TABLE */}
-          <div className={styles.tableSection}>
-            {loading ? (
-              <p>Loading responders…</p>
-            ) : (
-              <table className={styles.userTable}>
-                <thead>
-                  <tr>
-                    <th>ID</th>
-                    <th>Name</th>
-                    <th>Email</th>
-                    <th>Address</th>
-                    <th>Status</th>
-                    <th>Action</th>
-                  </tr>
-                </thead>
+          {/* RESPONDER TABLE */}
+          <table className={styles.userTable}>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Address</th>
+                <th>Status</th>
+                <th>Action</th>
+              </tr>
+            </thead>
 
-                <tbody>
-                  {filteredResponders.map((r) => (
-                    <tr key={r.id}>
-                      <td>{r.id.slice(0, 6)}…</td>
-                      <td>{r.name}</td>
-                      <td>{r.email}</td>
-                      <td>{r.address}</td>
+            <tbody>
+              {filteredResponders.map((r) => (
+                <tr key={r.id}>
+                  <td>{r.id.slice(0, 6)}…</td>
+                  <td>{r.name}</td>
+                  <td>{r.email}</td>
+                  <td>{r.address}</td>
+                  <td>
+                    <span
+                      className={
+                        r.status === "Available"
+                          ? styles.statusAvailable
+                          : styles.statusDispatched
+                      }
+                    >
+                      {r.status}
+                    </span>
+                  </td>
 
-                      <td>
-                        <span
-                          className={
-                            r.status === "Available"
-                              ? styles.statusAvailable
-                              : styles.statusDispatched
-                          }
-                        >
-                          {r.status}
-                        </span>
-                      </td>
-
-                      <td>
-                        {r.status === "Available" ? (
-                          <button
-                            className={styles.dispatchBtn}
-                            onClick={() => handleDispatchClick()}
-                          >
-                            <FaTruck /> Dispatch
-                          </button>
-                        ) : (
-                          <button
-                            className={styles.viewBtn}
-                            onClick={() => openViewModal(r)}
-                          >
-                            <FaEye /> View
-                          </button>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
-          </div>
+                  <td>
+                    {r.status === "Available" ? (
+                      <button className={styles.dispatchBtn} onClick={handleDispatchClick}>
+                        <FaTruck /> Dispatch
+                      </button>
+                    ) : (
+                      <button className={styles.viewBtn} onClick={() => openViewModal(r)}>
+                        <FaEye /> View
+                      </button>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </div>
 
-      {/* VIEW MODAL */}
+      {/* VIEW DISPATCH MODAL */}
       {selectedResponderView && dispatchInfo && (
         <div className={styles.modalOverlay} onClick={closeView}>
           <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
@@ -322,11 +292,11 @@ const DispatchPage: React.FC = () => {
             <p><strong>Contact:</strong> {selectedResponderView.contact}</p>
 
             <hr />
+
             <h4>🚨 Latest Dispatch</h4>
 
             <p><strong>Alert:</strong> {dispatchInfo.alertType}</p>
             <p><strong>Location:</strong> {dispatchInfo.alertLocation}</p>
-
             <p><strong>Reporter:</strong> {dispatchInfo.userReported}</p>
             <p><strong>Reporter Contact:</strong> {dispatchInfo.userContact}</p>
             <p><strong>Reporter Address:</strong> {dispatchInfo.userAddress}</p>
@@ -344,32 +314,49 @@ const DispatchPage: React.FC = () => {
         </div>
       )}
 
-      {/* ALERT MODAL */}
+      {/* ALERT SELECTION MODAL (TABLE VERSION) */}
       {alerts.length > 0 && !showResponderModal && selectedAlert === null && (
         <div className={styles.modalOverlay} onClick={() => setAlerts([])}>
-          <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
+          <div className={styles.modalWide} onClick={(e) => e.stopPropagation()}>
             <h3 className={styles.modalTitle}>Select Alert</h3>
 
-            {alerts.map((alert) => (
-  <div key={alert.id} className={styles.alertCard}>
-    <h4>{alert.type}</h4>
+            <div className={styles.tableScroll}>
+              <table className={styles.alertTable}>
+                <thead>
+                  <tr>
+                    <th>Type</th>
+                    <th>Location</th>
+                    <th>Reporter</th>
+                    <th>Contact</th>
+                    <th>Email</th>
+                    <th>Address</th>
+                    <th>Select</th>
+                  </tr>
+                </thead>
 
-    <p><strong>Location:</strong> {alert.location}</p>
-    <p><strong>Reporter:</strong> {alert.userName}</p>
+                <tbody>
+                  {alerts.map((alert) => (
+                    <tr key={alert.id}>
+                      <td>{alert.type}</td>
+                      <td>{alert.location}</td>
+                      <td>{alert.userName}</td>
+                      <td>{alert.userContact}</td>
+                      <td>{alert.userEmail}</td>
+                      <td>{alert.userAddress}</td>
 
-    <p><strong>Reporter Contact:</strong> {alert.userContact || "No contact provided"}</p>
-    <p><strong>Reporter Email:</strong> {alert.userEmail || "No email provided"}</p>
-    <p><strong>Reporter Address:</strong> {alert.userAddress || "No address provided"}</p>
-
-    <button
-      className={styles.assignBtn}
-      onClick={() => selectAlertForDispatch(alert)}
-    >
-      Select
-    </button>
-  </div>
-))}
-
+                      <td>
+                        <button
+                          className={styles.assignBtn}
+                          onClick={() => selectAlertForDispatch(alert)}
+                        >
+                          Select
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
 
             <button className={styles.closeBtn} onClick={() => setAlerts([])}>
               Close
@@ -378,39 +365,60 @@ const DispatchPage: React.FC = () => {
         </div>
       )}
 
-      {/* RESPONDER SELECT MODAL */}
+      {/* RESPONDER SELECTION MODAL (TABLE VERSION) */}
       {showResponderModal && (
         <div className={styles.modalOverlay} onClick={() => setShowResponderModal(false)}>
-          <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
+          <div className={styles.modalWide} onClick={(e) => e.stopPropagation()}>
             <h3 className={styles.modalTitle}>Select Responders</h3>
 
-            <label>
-              <input type="checkbox" checked={selectAll} onChange={toggleSelectAll} /> Select All
+            <label className={styles.selectAllRow}>
+              <input type="checkbox" checked={selectAll} onChange={toggleSelectAll} />
+              <span>Select All Responders</span>
             </label>
 
-            <div className={styles.responderList}>
-              {responders.map((r) => (
-                <label key={r.id} className={styles.responderCard}>
-                  <input
-                    type="checkbox"
-                    checked={selectedResponderIds.has(r.id)}
-                    onChange={() => toggleResponder(r.id)}
-                  />
-                  {r.name} — {r.email}
-                </label>
-              ))}
+            <div className={styles.tableScroll}>
+              <table className={styles.responderTable}>
+                <thead>
+                  <tr>
+                    <th>Select</th>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Contact</th>
+                  </tr>
+                </thead>
+
+                <tbody>
+                  {responders.map((r) => (
+                    <tr key={r.id}>
+                      <td>
+                        <input
+                          type="checkbox"
+                          checked={selectedResponderIds.has(r.id)}
+                          onChange={() => toggleResponder(r.id)}
+                        />
+                      </td>
+                      <td>{r.name}</td>
+                      <td>{r.email}</td>
+                      <td>{r.contact || "—"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
 
-            <button className={styles.assignBtn} onClick={dispatchResponders}>
-              Dispatch Selected
-            </button>
+            <div className={styles.modalActions}>
+              <button className={styles.assignBtn} onClick={dispatchResponders}>
+                Dispatch Selected
+              </button>
 
-            <button className={styles.closeBtn} onClick={() => setShowResponderModal(false)}>
-              Close
-            </button>
+              <button className={styles.closeBtn} onClick={() => setShowResponderModal(false)}>
+                Close
+              </button>
+            </div>
           </div>
         </div>
       )}
+
     </div>
   );
 };
