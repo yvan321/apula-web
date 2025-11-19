@@ -64,7 +64,7 @@ export default function UsersPage() {
     return (
       (user.name || "").toLowerCase().includes(q) ||
       (user.role || "").toLowerCase().includes(q) ||
-      (user.department || "").toLowerCase().includes(q) ||
+      (user.contact || "").toLowerCase().includes(q)||
       (user.email || "").toLowerCase().includes(q)
     );
   };
@@ -178,7 +178,7 @@ export default function UsersPage() {
                   <th>ID</th>
                   <th>Name</th>
                   <th>Role</th>
-                  <th>Department</th>
+                  <th>Contact</th>   {/* ← changed */}
                   <th>Actions</th>
                 </tr>
               </thead>
@@ -195,7 +195,7 @@ export default function UsersPage() {
                       <td data-label="ID">{user.id}</td>
                       <td data-label="Name">{user.name ?? "N/A"}</td>
                       <td data-label="Role">{user.role ?? "N/A"}</td>
-                      <td data-label="Department">{user.department ?? "N/A"}</td>
+                      <td data-label="Contact">{user.contact ?? "N/A"}</td> {/* ← changed */}
                       <td data-label="Actions">
                         <button className={styles.viewBtn} onClick={() => openModal(user)}>
                           View
