@@ -183,6 +183,50 @@
   overflow: hidden;
 }
 
+/* Notif unread */
+
+.notifWrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.badge {
+  background: red;
+  color: white;
+  font-size: 11px;
+  font-weight: bold;
+  padding: 2px 6px;
+  border-radius: 50%;
+  position: absolute;
+  top: -6px;
+  right: -12px;
+}
+
+.menuWrapper {
+  position: relative;
+  display: inline-block;
+}
+
+.menuBadge {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  background: red;
+  color: white;
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 50%;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 16px;
+  min-height: 16px;
+}
+
+
 /* Hover: light slide-right effect */
 .sidebarLink::before {
   content: "";

@@ -18,7 +18,15 @@ import {
 
 import { auth, db } from "@/lib/firebase";
 import { onAuthStateChanged, signOut } from "firebase/auth";
-import { doc, getDoc } from "firebase/firestore";
+import { 
+  doc, 
+  getDoc,
+  collection,
+  query,
+  where,
+  onSnapshot
+} from "firebase/firestore";
+
 
 export default function AdminHeader() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -33,7 +41,27 @@ export default function AdminHeader() {
   const handleLogout = async () => {
     await signOut(auth);
     window.location.href = "/login";
+
+    
   };
+
+  const [unreadCount, setUnreadCount] = useState(0);
+
+useEffect(() => {
+  const q = query(
+    collection(db, "alerts"),
+    where("read", "==", false)
+  );
+
+  const unsubscribe = onSnapshot(q, (snapshot) => {
+    setUnreadCount(snapshot.size); // realtime unread count
+  });
+
+  return () => unsubscribe();
+}, []);
+
+
+  
 
   // ✅ Load logged-in user data
   useEffect(() => {
@@ -64,6 +92,9 @@ export default function AdminHeader() {
     return () => unsubscribe();
   }, []);
 
+
+  
+
   return (
     <>
       {/* Sidebar */}
@@ -89,14 +120,21 @@ export default function AdminHeader() {
           </a>
 
           <a
-            href="/dashboard/notifications"
-            className={`${styles.sidebarLink} ${
-              isActive("/dashboard/notifications") ? styles.activeLink : ""
-            }`}
-          >
-            <Bell size={18} className={styles.icon} />
-            <span>Notifications</span>
-          </a>
+  href="/dashboard/notifications"
+  className={`${styles.sidebarLink} ${
+    isActive("/dashboard/notifications") ? styles.activeLink : ""
+  }`}
+>
+  <div className={styles.notifWrapper}>
+    <Bell size={18} className={styles.icon} />
+    <span>Notifications</span>
+
+    {unreadCount > 0 && (
+      <span className={styles.badge}>{unreadCount}</span>
+    )}
+  </div>
+</a>
+
 
           <a
             href="/dashboard/users"
@@ -166,27 +204,38 @@ export default function AdminHeader() {
         </button>
       </aside>
 
-      {/* Header */}
-      <header className={styles.header}>
-        <div className={styles.logoWrapper}>
-          <button
-            className={styles.menuButton}
-            onClick={toggleSidebar}
-            aria-label="Toggle Menu"
-          >
-            &#9776;
-          </button>
+     {/* Header */}
+<header className={styles.header}>
+  <div className={styles.logoWrapper}>
+    
+    {/* Menu Button with Badge */}
+    <div className={styles.menuWrapper}>
+      <button
+        className={styles.menuButton}
+        onClick={toggleSidebar}
+        aria-label="Toggle Menu"
+      >
+        &#9776;
+      </button>
 
-          <Image src="/logo.png" alt="Logo" width={100} height={50} />
-        </div>
+      {unreadCount > 0 && (
+        <span className={styles.menuBadge}>{unreadCount}</span>
+      )}
+    </div>
 
-        <div className={styles.rightWrapper}>
-          <div className={styles.userInfo}>
-            <span className={styles.userName}>Welcome, {userName}!</span>
-            <div className={styles.userIcon}>{initial}</div>
-          </div>
-        </div>
-      </header>
+    {/* Logo */}
+    <Image src="/logo.png" alt="Logo" width={100} height={50} />
+  </div>
+
+  {/* Right Side: User Info */}
+  <div className={styles.rightWrapper}>
+    <div className={styles.userInfo}>
+      <span className={styles.userName}>Welcome, {userName}!</span>
+      <div className={styles.userIcon}>{initial}</div>
+    </div>
+  </div>
+</header>
+
     </>
   );
 }
