@@ -34,6 +34,7 @@ const DispatchPage: React.FC = () => {
 
   const [selectedResponderView, setSelectedResponderView] = useState<any>(null);
   const [dispatchInfo, setDispatchInfo] = useState<any>(null);
+const [showSuccessModal, setShowSuccessModal] = useState(false);
 
   // ------------------------------------------------------------
   // REAL-TIME RESPONDERS
@@ -111,15 +112,20 @@ const DispatchPage: React.FC = () => {
     });
   };
 
-  const toggleSelectAll = () => {
-    if (!selectAll) {
-      setSelectedResponderIds(new Set(responders.map((r) => r.id)));
-      setSelectAll(true);
-    } else {
-      setSelectedResponderIds(new Set());
-      setSelectAll(false);
-    }
-  };
+const toggleSelectAll = () => {
+  if (!selectAll) {
+    const availableIds = responders
+      .filter((r) => r.status === "Available")
+      .map((r) => r.id);
+
+    setSelectedResponderIds(new Set(availableIds));
+    setSelectAll(true);
+  } else {
+    setSelectedResponderIds(new Set());
+    setSelectAll(false);
+  }
+};
+
 
   // ------------------------------------------------------------
   // DISPATCH SELECTED RESPONDERS
@@ -174,12 +180,17 @@ const DispatchPage: React.FC = () => {
       // Update alert → Dispatched
       batch.update(doc(db, "alerts", selectedAlert.id), { status: "Dispatched" });
 
-      await batch.commit();
+    await batch.commit();
 
-      window.alert("Dispatch completed successfully!");
+// Show success modal instead of alert
+setShowSuccessModal(true);
 
-      setShowResponderModal(false);
-      setAlerts([]);
+setShowResponderModal(false);
+setAlerts([]);
+
+// OPTIONAL: auto-close after 2.5 seconds
+setTimeout(() => setShowSuccessModal(false), 2500);
+
     } catch (err) {
       console.error(err);
       window.alert("Error dispatching responders.");
@@ -391,11 +402,16 @@ const DispatchPage: React.FC = () => {
                   {responders.map((r) => (
                     <tr key={r.id}>
                       <td>
-                        <input
-                          type="checkbox"
-                          checked={selectedResponderIds.has(r.id)}
-                          onChange={() => toggleResponder(r.id)}
-                        />
+                       <input
+  type="checkbox"
+  disabled={r.status === "Dispatched"}
+  checked={selectedResponderIds.has(r.id)}
+  onChange={() => toggleResponder(r.id)}
+/>
+{r.status === "Dispatched" && (
+  <span className={styles.disabledTag}>Already Dispatched</span>
+)}
+
                       </td>
                       <td>{r.name}</td>
                       <td>{r.email}</td>
@@ -417,7 +433,33 @@ const DispatchPage: React.FC = () => {
             </div>
           </div>
         </div>
+
+        
       )}
+
+      {/* SUCCESS MODAL */}
+
+
+
+      {/* SUCCESS MODAL */}
+{showSuccessModal && (
+  <div className={styles.modalOverlay}>
+    <div className={styles.successModal}>
+      <div className={styles.successIcon}>✔</div>
+      <h3 className={styles.successTitle}>Dispatch Successful!</h3>
+      <p className={styles.successMessage}>
+        Responders have been dispatched successfully.
+      </p>
+
+      <button
+        className={styles.successCloseBtn}
+        onClick={() => setShowSuccessModal(false)}
+      >
+        Close
+      </button>
+    </div>
+  </div>
+)}
 
     </div>
   );
