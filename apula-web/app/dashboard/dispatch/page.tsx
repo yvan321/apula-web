@@ -127,6 +127,7 @@ const toggleSelectAll = () => {
 };
 
 
+
   // ------------------------------------------------------------
   // DISPATCH SELECTED RESPONDERS
   // ------------------------------------------------------------
@@ -264,27 +265,36 @@ setTimeout(() => setShowSuccessModal(false), 2500);
                   <td>{r.address}</td>
                   <td>
                     <span
-                      className={
-                        r.status === "Available"
-                          ? styles.statusAvailable
-                          : styles.statusDispatched
-                      }
-                    >
-                      {r.status}
-                    </span>
+  className={
+    r.status === "Available"
+      ? styles.statusAvailable
+      : r.status === "Unavailable"
+      ? styles.statusUnavailable
+      : styles.statusDispatched
+  }
+>
+  {r.status}
+</span>
                   </td>
 
-                  <td>
-                    {r.status === "Available" ? (
-                      <button className={styles.dispatchBtn} onClick={handleDispatchClick}>
-                        <FaTruck /> Dispatch
-                      </button>
-                    ) : (
-                      <button className={styles.viewBtn} onClick={() => openViewModal(r)}>
-                        <FaEye /> View
-                      </button>
-                    )}
-                  </td>
+                 <td>
+  {r.status === "Available" && (
+    <button className={styles.dispatchBtn} onClick={handleDispatchClick}>
+      <FaTruck /> Dispatch
+    </button>
+  )}
+
+  {r.status === "Dispatched" && (
+    <button className={styles.viewBtn} onClick={() => openViewModal(r)}>
+      <FaEye /> View
+    </button>
+  )}
+
+  {r.status === "Unavailable" && (
+    <span style={{ color: "#888", fontStyle: "italic" }}>No Action</span>
+  )}
+</td>
+
                 </tr>
               ))}
             </tbody>
@@ -404,13 +414,19 @@ setTimeout(() => setShowSuccessModal(false), 2500);
                       <td>
                        <input
   type="checkbox"
-  disabled={r.status === "Dispatched"}
+  disabled={r.status === "Unavailable" || r.status === "Dispatched"}
   checked={selectedResponderIds.has(r.id)}
   onChange={() => toggleResponder(r.id)}
 />
+
 {r.status === "Dispatched" && (
   <span className={styles.disabledTag}>Already Dispatched</span>
 )}
+
+{r.status === "Unavailable" && (
+  <span className={styles.disabledTag}>Unavailable</span>
+)}
+
 
                       </td>
                       <td>{r.name}</td>

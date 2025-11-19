@@ -83,7 +83,13 @@
   color: #dc3545;
   font-weight: 700;
 }
-
+.statusUnavailable {
+  background: #000;
+  color: #fff;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-weight: bold;
+}
 /* ACTION BUTTONS */
 .dispatchBtn {
   background: #28a745;
