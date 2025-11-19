@@ -107,7 +107,13 @@ const ReportPage = () => {
           <div className={styles.cardGrid}>
             {filteredReports.length > 0 ? (
               filteredReports.map((report) => (
-                <div key={report.id} className={styles.cardItem}>
+                <div
+  key={report.id}
+  className={`${styles.cardItem} ${
+    styles[report.status?.toLowerCase()] || ""
+  }`}
+>
+
                   <h3>{report.userName || "Unknown User"}</h3>
                   <p>
                     <FaMapMarkerAlt /> {report.userAddress || "No address"}

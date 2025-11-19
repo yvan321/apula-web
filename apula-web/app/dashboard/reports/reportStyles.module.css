@@ -131,6 +131,23 @@
   background: #e8f5e9;
 }
 
+/* 🔥 CARD COLORS BASED ON STATUS */
+.cardItem.pending {
+  background: #fff7f7;      /* light red */
+  border: 1px solid #ffdada;
+}
+
+.cardItem.dispatched {
+  background: #e9f2ff;       /* soft blue */
+  border: 1px solid #bcd4ff;
+}
+
+.cardItem.resolved {
+  background: #e8f5e9;       /* soft green */
+  border: 1px solid #b2dfb5;
+}
+
+
 /* 🔘 Buttons */
 .viewBtn {
   background: #b71c1c;
