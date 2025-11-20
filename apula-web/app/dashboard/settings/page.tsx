@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect } from "react";
 import AdminHeader from "@/components/shared/adminHeader";
+import AlertBellButton from "@/components/AlertDispatch/AlertBellButton";
+import AlertDispatchModal from "@/components/AlertDispatch/AlertDispatchModal";
 import styles from "./settingsStyles.module.css";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -104,6 +106,14 @@ const SettingsPage = () => {
   return (
     <div>
       <AdminHeader />
+      {/* 🔔 Bell Icon at top-right */}
+      <div style={{ position: "absolute", top: 20, right: 30, zIndex: 50 }}>
+        <AlertBellButton />
+      </div>
+
+      {/* 🚨 Alert Dispatch Modal (opens when bell is clicked) */}
+      <AlertDispatchModal />
+
       <div className={styles.container}>
         <div data-aos="fade-up" className={styles.contentSection}>
           <div className={styles.headerRow}>

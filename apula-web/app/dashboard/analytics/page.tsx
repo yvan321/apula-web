@@ -15,7 +15,8 @@ import {
 import { Bar } from "react-chartjs-2";
 import Image from "next/image";
 import nyclogo from "@/public/analytics.png";
-
+import AlertBellButton from "@/components/AlertDispatch/AlertBellButton";
+import AlertDispatchModal from "@/components/AlertDispatch/AlertDispatchModal";
 import { collection, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
@@ -80,6 +81,13 @@ const AnalyticsPage = () => {
   return (
     <div>
       <AdminHeader />
+      {/* 🔔 Bell Icon at top-right */}
+      <div style={{ position: "absolute", top: 20, right: 30, zIndex: 50 }}>
+        <AlertBellButton />
+      </div>
+
+      {/* 🚨 Alert Dispatch Modal (opens when bell is clicked) */}
+      <AlertDispatchModal />
 
       <div className={styles.container}>
         <div data-aos="fade-up" className={styles.contentSection}>

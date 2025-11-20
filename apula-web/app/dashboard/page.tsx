@@ -4,10 +4,13 @@ import React, { useState, useEffect } from "react";
 import AdminHeader from "@/components/shared/adminHeader";
 import styles from "./adminDashboardStyles.module.css";
 import { FaRegClock } from "react-icons/fa";
-import DebugAlertButton from "@/components/shared/DebugAlertButton";
 
 import { db } from "@/lib/firebase";
 import { collection, onSnapshot, query, where } from "firebase/firestore";
+
+// 🔔 Import Bell + Modal
+import AlertBellButton from "@/components/AlertDispatch/AlertBellButton";
+import AlertDispatchModal from "@/components/AlertDispatch/AlertDispatchModal";
 
 const AdminDashboard = () => {
   const [time, setTime] = useState("");
@@ -18,9 +21,11 @@ const AdminDashboard = () => {
   const [activeAlertCount, setActiveAlertCount] = useState(0);
   const [resolvedCount, setResolvedCount] = useState(0);
 
-  const [temperature, setTemperature] = useState(31); // static for demo
+  const [temperature, setTemperature] = useState(31); // static sample
 
-  // 🕒 Update time/date
+  // =============================
+  // 🕒 UPDATE TIME + DATE
+  // =============================
   useEffect(() => {
     const updateTime = () => {
       const now = new Date();
@@ -40,12 +45,15 @@ const AdminDashboard = () => {
         })
       );
     };
+
     updateTime();
     const timer = setInterval(updateTime, 1000);
     return () => clearInterval(timer);
   }, []);
 
-  // 📌 LIVE COUNT: Registered Users
+  // =============================
+  // 📊 REGISTERED USERS COUNT
+  // =============================
   useEffect(() => {
     const unsub = onSnapshot(collection(db, "users"), (snap) => {
       setUserCount(snap.size);
@@ -53,12 +61,15 @@ const AdminDashboard = () => {
     return () => unsub();
   }, []);
 
-  // 📌 LIVE COUNT: Active Alerts (NOT resolved)
+  // =============================
+  // 📊 ACTIVE ALERT COUNT
+  // =============================
   useEffect(() => {
     const q = query(
       collection(db, "alerts"),
       where("status", "!=", "Resolved")
     );
+
     const unsub = onSnapshot(q, (snap) => {
       setActiveAlertCount(snap.size);
     });
@@ -66,12 +77,15 @@ const AdminDashboard = () => {
     return () => unsub();
   }, []);
 
-  // 📌 LIVE COUNT: Resolved Alerts
+  // =============================
+  // 📊 RESOLVED ALERT COUNT
+  // =============================
   useEffect(() => {
     const q = query(
       collection(db, "alerts"),
       where("status", "==", "Resolved")
     );
+
     const unsub = onSnapshot(q, (snap) => {
       setResolvedCount(snap.size);
     });
@@ -79,16 +93,24 @@ const AdminDashboard = () => {
     return () => unsub();
   }, []);
 
-  // 🥵 Temperature UI
+  // =============================
+  // 🌡️ TEMPERATURE DISPLAY
+  // =============================
   const tempClass = temperature >= 32 ? styles.hotTemp : styles.coolTemp;
 
   return (
     <div>
       <AdminHeader />
 
-      <div className={styles.container}>
-        <DebugAlertButton />
+      {/* 🔔 Bell Icon at top-right */}
+      <div style={{ position: "absolute", top: 20, right: 30, zIndex: 50 }}>
+        <AlertBellButton />
+      </div>
 
+      {/* 🚨 Alert Dispatch Modal (opens when bell is clicked) */}
+      <AlertDispatchModal />
+
+      <div className={styles.container}>
         <div data-aos="fade-up" className={styles.contentSection}>
           <div className={styles.headerRow}>
             <h2 className={styles.pageTitle}>Admin Dashboard</h2>
@@ -96,9 +118,13 @@ const AdminDashboard = () => {
 
           <hr className={styles.separator} />
 
-          {/* ========== 1st Row: Time + Temperature ========== */}
+          {/* 
+          ================================
+            1ST ROW – TIME + TEMPERATURE
+          ================================
+          */}
           <div className={styles.topRow}>
-            {/* Time */}
+            {/* 🕒 TIME CARD */}
             <div className={styles.cardTime}>
               <FaRegClock className={styles.timeIcon} />
               <div className={styles.timeInfo}>
@@ -107,7 +133,7 @@ const AdminDashboard = () => {
               </div>
             </div>
 
-            {/* Temperature */}
+            {/* 🌡️ TEMPERATURE CARD */}
             <div className={`${styles.cardTemperature} ${tempClass}`}>
               <h3 className={styles.tempValue}>{temperature}°C</h3>
               <p className={styles.tempStatus}>
@@ -116,9 +142,13 @@ const AdminDashboard = () => {
             </div>
           </div>
 
-          {/* ========== 2nd Row: DATA SUMMARY ========== */}
+          {/* 
+          ================================
+            2ND ROW – SUMMARY CARDS
+          ================================
+          */}
           <div className={styles.summaryRow}>
-            {/* Registered Users */}
+            {/* Users */}
             <div className={`${styles.summaryCard} ${styles.usersCard}`}>
               <h4>Registered Users</h4>
               <p className={styles.summaryValue}>{userCount}</p>

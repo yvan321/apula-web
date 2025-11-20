@@ -2,6 +2,8 @@
 
 import React, { useEffect, useState } from "react";
 import AdminHeader from "@/components/shared/adminHeader";
+import AlertBellButton from "@/components/AlertDispatch/AlertBellButton";
+import AlertDispatchModal from "@/components/AlertDispatch/AlertDispatchModal";
 import styles from "./userpagestyles.module.css";
 import { FaUsers, FaUserShield, FaUserTie, FaUser, FaSearch } from "react-icons/fa";
 import { collection, getDocs } from "firebase/firestore";
@@ -93,6 +95,14 @@ export default function UsersPage() {
   return (
     <div>
       <AdminHeader />
+
+        {/* 🔔 Bell Icon at top-right */}
+      <div style={{ position: "absolute", top: 20, right: 30, zIndex: 50 }}>
+        <AlertBellButton />
+      </div>
+
+      {/* 🚨 Alert Dispatch Modal (opens when bell is clicked) */}
+      <AlertDispatchModal />
 
       <div className={styles.container}>
         <div data-aos="fade-up" className={styles.contentSection}>

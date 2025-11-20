@@ -19,6 +19,8 @@ import {
   writeBatch,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import AlertBellButton from "@/components/AlertDispatch/AlertBellButton";
+import AlertDispatchModal from "@/components/AlertDispatch/AlertDispatchModal";
 
 const DispatchPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -225,6 +227,14 @@ setTimeout(() => setShowSuccessModal(false), 2500);
   return (
     <div className={styles.pageWrapper}>
       <AdminHeader />
+
+      {/* 🔔 Bell Icon at top-right */}
+      <div style={{ position: "absolute", top: 20, right: 30, zIndex: 50 }}>
+        <AlertBellButton />
+      </div>
+
+      {/* 🚨 Alert Dispatch Modal (opens when bell is clicked) */}
+      <AlertDispatchModal />
 
       <div className={styles.container}>
         <div className={styles.contentSection}>

@@ -9,6 +9,8 @@ import {
   FaMapMarkerAlt,
 } from "react-icons/fa";
 import AdminHeader from "@/components/shared/adminHeader";
+import AlertBellButton from "@/components/AlertDispatch/AlertBellButton";
+import AlertDispatchModal from "@/components/AlertDispatch/AlertDispatchModal";
 import styles from "./reportStyles.module.css";
 import {
   collection,
@@ -84,6 +86,14 @@ const ReportPage = () => {
   return (
     <div>
       <AdminHeader />
+
+    {/* 🔔 Bell Icon at top-right */}
+      <div style={{ position: "absolute", top: 20, right: 30, zIndex: 50 }}>
+        <AlertBellButton />
+      </div>
+
+      {/* 🚨 Alert Dispatch Modal (opens when bell is clicked) */}
+      <AlertDispatchModal />
 
       <div className={styles.container}>
         <div className={styles.contentSection}>
