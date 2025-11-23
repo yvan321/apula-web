@@ -90,57 +90,46 @@ const AdminDashboard = () => {
     return () => unsub();
   }, []);
 
-  /* ---------------------- ALL ALERTS (FULL YEAR GRAPH) ---------------------- */
-  useEffect(() => {
-    const q = collection(db, "alerts");
+ /* ---------------------- ALL ALERTS (FULL YEAR GRAPH) ---------------------- */
+useEffect(() => {
+  const unsub = onSnapshot(collection(db, "alerts"), (snapshot) => {
+    const monthly = Array(12).fill(0);
 
-    const unsub = onSnapshot(q, (snapshot) => {
-      const monthly = {
-        0: 0,
-        1: 0,
-        2: 0,
-        3: 0,
-        4: 0,
-        5: 0,
-        6: 0,
-        7: 0,
-        8: 0,
-        9: 0,
-        10: 0,
-        11: 0,
-      };
+    snapshot.forEach((doc) => {
+      const data = doc.data();
+      if (!data.timestamp) return;
 
-      snapshot.forEach((doc) => {
-        const data = doc.data();
-        if (!data.createdAt) return;
+      let date: Date | null = null;
 
-        const m = data.createdAt.toDate().getMonth();
-        monthly[m] += 1;
-      });
+      // Case 1: Firestore Timestamp (new alerts)
+      if (data.timestamp?.seconds) {
+        date = new Date(data.timestamp.seconds * 1000);
+      }
 
-      const formatted = Object.keys(monthly).map((m) => ({
-        month: [
-          "Jan",
-          "Feb",
-          "Mar",
-          "Apr",
-          "May",
-          "Jun",
-          "Jul",
-          "Aug",
-          "Sep",
-          "Oct",
-          "Nov",
-          "Dec",
-        ][m],
-        alerts: monthly[m],
-      }));
+      // Case 2: String timestamp (old alerts)
+      else if (typeof data.timestamp === "string") {
+        date = new Date(data.timestamp);
+      }
 
-      setMonthData(formatted);
+      // Still invalid → skip
+      if (!date || isNaN(date.getTime())) return;
+
+      const m = date.getMonth(); // 0–11
+      monthly[m] += 1;
     });
 
-    return () => unsub();
-  }, []);
+    setMonthData(
+      monthly.map((count, index) => ({
+        month: ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][index],
+        alerts: count,
+      }))
+    );
+  });
+
+  return () => unsub();
+}, []);
+
+
 
   return (
     <div>
