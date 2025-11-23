@@ -26,143 +26,184 @@
   border-top: 1px solid #ccc;
 }
 
-/* 🔍 Search */
-.filters {
+/* ----------- SEARCH + FILTER ROW ----------- */
+.filtersRow {
   display: flex;
-  justify-content: flex-start;
+  justify-content: space-between;
   align-items: center;
-  flex-wrap: wrap;
-  gap: 10px;
   margin-bottom: 20px;
   width: 100%;
+  gap: 20px;
 }
 
 .searchWrapper {
+  flex: 1;
+  max-width: 50%;
   display: flex;
   align-items: center;
-  width: 100%;
-  max-width: 350px;
   position: relative;
 }
 
 .searchWrapper input {
   width: 100%;
   padding: 10px 40px 10px 15px;
-  border-radius: 10px;
+  border-radius: 12px;
   border: 1px solid #ccc;
   outline: none;
   font-size: 0.95rem;
-  transition: 0.3s;
+  background: #fafafa;
+  transition: 0.3s ease;
+}
+
+.searchWrapper input:focus {
+  border-color: #A30000;
+  box-shadow: 0 0 0 3px rgba(163, 0, 0, 0.18);
+  background: white;
 }
 
 .searchWrapper svg {
   position: absolute;
   right: 12px;
-  color: #888;
+  color: #666;
   font-size: 1.2rem;
 }
 
-.searchInput:focus {
-  border-color: #f28c28;
-  box-shadow: 0 0 0 2px rgba(242, 140, 40, 0.2);
+.statusFilters {
+  flex: 1;
+  max-width: 50%;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
 }
 
-/* 🧾 Card Layout */
+/* Filter Buttons */
+.filterBtn {
+  padding: 8px 14px;
+  border-radius: 10px;
+  border: none;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  background: #f0f0f0;
+  color: #333;
+  transition: 0.25s ease;
+}
+
+.filterBtn:hover {
+  transform: translateY(-2px);
+  background: #e4e4e4;
+}
+
+/* Active Filter Colors */
+.activeFilter.pendingBtn {
+  background: #fff3cd !important;
+  color: #b38b00 !important;
+  box-shadow: 0 4px 12px rgba(179, 139, 0, 0.35);
+}
+
+.activeFilter.dispatchedBtn {
+  background: #d1ecf1 !important;
+  color: #0c5460 !important;
+  box-shadow: 0 4px 12px rgba(12, 84, 96, 0.35);
+}
+
+.activeFilter.resolvedBtn {
+  background: #d4edda !important;
+  color: #155724 !important;
+  box-shadow: 0 4px 12px rgba(21, 87, 36, 0.35);
+}
+
+.activeFilter.allBtn {
+  background: #A30000 !important;
+  color: white !important;
+  box-shadow: 0 4px 14px rgba(163, 0, 0, 0.35);
+}
+
+/* ----------- CARD GRID ----------- */
 .cardGrid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 16px;
+  gap: 22px;
+  margin-top: 25px;
 }
 
 .cardItem {
-  background: #fff7f7;
-  border: 1px solid #ffdada;
-  border-radius: 10px;
-  padding: 18px;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
-  transition: all 0.3s ease;
+  background: white;
+  border-radius: 18px;
+  padding: 22px;
+  border: 1px solid rgba(230, 230, 230, 0.6);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
+  transition: 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  position: relative;
 }
 
 .cardItem:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+  transform: translateY(-6px);
+  box-shadow: 0 12px 26px rgba(0, 0, 0, 0.18);
 }
 
 .cardItem h3 {
-  color: #b71c1c;
-  font-size: 1.1rem;
-  margin-bottom: 8px;
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #A30000;
 }
 
 .cardItem p {
-  margin: 4px 0;
-  color: #333;
+  margin: 0;
   display: flex;
   align-items: center;
-  gap: 6px;
-  font-size: 0.9rem;
+  gap: 8px;
+  color: #333;
+  font-size: 0.95rem;
+  font-weight: 500;
 }
 
-.cardItem .status {
-  display: inline-block;
-  margin-top: 8px;
-}
-
-/* 🔖 Status Tags */
+/* TOP RIGHT BADGE FOR LIST CARDS */
 .status {
-  padding: 3px 10px;
-  border-radius: 6px;
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  padding: 6px 12px;
+  border-radius: 10px;
   font-weight: 600;
-  font-size: 0.9rem;
+  font-size: 0.85rem;
+  white-space: nowrap;
 }
 
 .pending {
-  color: #f57c00;
-  background: #fff3e0;
+  background: #fff3cd;
+  color: #b38b00;
 }
 
-.acknowledged {
-  color: #0277bd;
-  background: #e1f5fe;
+.dispatched {
+  background: #d1ecf1;
+  color: #0c5460;
 }
 
 .resolved {
-  color: #2e7d32;
-  background: #e8f5e9;
+  background: #d4edda;
+  color: #155724;
 }
 
-/* 🔥 CARD COLORS BASED ON STATUS */
-.cardItem.pending {
-  background: #fff7f7;      /* light red */
-  border: 1px solid #ffdada;
-}
-
-.cardItem.dispatched {
-  background: #e9f2ff;       /* soft blue */
-  border: 1px solid #bcd4ff;
-}
-
-.cardItem.resolved {
-  background: #e8f5e9;       /* soft green */
-  border: 1px solid #b2dfb5;
-}
-
-
-/* 🔘 Buttons */
 .viewBtn {
-  background: #b71c1c;
-  color: #fff;
+  margin-top: 15px;
+  padding: 10px;
+  width: 100%;
+  background: #A30000;
+  color: white;
   border: none;
-  padding: 6px 12px;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: 0.3s;
-  font-size: 0.9rem;
-  margin-top: 10px;
+  border-radius: 10px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  transition: 0.3s ease;
 }
 
 .viewBtn:hover {
-  background: #8e0000;
+  background: #CC0000;
+  transform: translateY(-2px);
 }
 
 .noResults {
@@ -171,217 +212,198 @@
   padding: 20px;
 }
 
-/* 🪟 Modal (View Details) */
+/* ====================== MODAL ====================== */
+
 .modalOverlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0, 0, 0, 0.55);
+  inset: 0;
+  backdrop-filter: blur(6px);
+  background: rgba(0, 0, 0, 0.45);
   display: flex;
   justify-content: center;
   align-items: center;
   z-index: 999;
-  animation: fadeIn 0.3s ease;
+  animation: fadeIn 0.25s ease;
 }
 
 .modalContent {
-  background: #fff;
-  padding: 25px 30px;
-  border-radius: 14px;
-  width: 380px;
-  max-width: 90%;
-  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.25);
+  background: #ffffff;
+  padding: 32px;
+  border-radius: 20px;
+  width: 480px;
+  max-width: 92%;
+  box-shadow: 0 12px 38px rgba(0, 0, 0, 0.25);
   animation: slideUp 0.35s ease;
   position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
 
-/* 🖊️ Edit Button in Top Right */
-.editBtn {
-  position: absolute;
-  top: 14px;
-  right: 14px;
-  background: #b71c1c;
-  color: white;
-  border: none;
-  border-radius: 6px;
-  padding: 6px 10px;
-  font-size: 0.85rem;
-  cursor: pointer;
-  transition: 0.3s;
-}
-
-.editBtn:hover {
-  background: #8e0000;
-}
-
+/* TITLE */
 .modalTitle {
-  font-size: 1.5rem;
+  font-size: 1.4rem;
   font-weight: 700;
-  color: #b71c1c;
-  margin-bottom: 15px;
-  text-align: center;
+  color: #A30000;
+  margin: 0 0 12px 0;
 }
 
+/* DETAILS */
 .modalDetails {
-  line-height: 1.7;
-  color: #333;
-  font-size: 0.95rem;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  font-size: 1rem;
 }
 
 .modalDetails p {
   display: flex;
   align-items: center;
-  gap: 6px;
-  margin-bottom: 8px;
+  gap: 10px;
+  margin: 0;
+  color: #333;
 }
 
-.closeBtn {
-  margin-top: 20px;
-  background: #b71c1c;
-  color: #fff;
-  border: none;
-  padding: 10px 16px;
-  border-radius: 8px;
-  cursor: pointer;
-  width: 100%;
+/* INLINE STATUS BADGE */
+.statusRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 6px 0;
+}
+
+.statusBadge {
+  padding: 6px 12px;
+  border-radius: 10px;
   font-weight: 600;
-  transition: background 0.3s;
+  font-size: 0.85rem;
+}
+
+/* EDIT button top-right */
+.editBtn {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  background: #A30000;
+  color: white;
+  border: none;
+  border-radius: 10px;
+  padding: 8px 12px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: 0.25s ease;
+}
+
+.editBtn:hover {
+  background: #CC0000;
+  transform: translateY(-2px);
+}
+
+/* CLOSE */
+.closeBtn {
+  align-self: flex-end;
+  padding: 8px 14px;
+  border-radius: 10px;
+  border: none;
+  background: #ccc;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: 0.25s ease;
 }
 
 .closeBtn:hover {
-  background: #8e0000;
+  background: #b5b5b5;
+  transform: translateY(-2px);
 }
 
-/* ✏️ Edit Modal Styles */
-.editModal {
-  background: #fff;
-  padding: 25px 30px;
-  border-radius: 14px;
-  width: 400px;
-  max-width: 95%;
-  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.25);
-  animation: slideUp 0.35s ease;
-}
-
-.editModal h3 {
-  font-size: 1.4rem;
-  color: #b71c1c;
-  margin-bottom: 15px;
-  text-align: center;
-}
+/* ====================== EDIT MODE ====================== */
 
 .editForm {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 14px;
+  margin-top: 10px;
 }
 
-.editForm input {
+.editForm label {
+  font-weight: 600;
+  color: #444;
+}
+
+.editForm select {
   padding: 10px;
-  border-radius: 8px;
-  border: 1px solid #ccc;
+  border-radius: 10px;
+  border: 1px solid #bbb;
+  font-size: 1rem;
   outline: none;
-  font-size: 0.95rem;
+  background: #f7f7f7;
+  transition: 0.25s ease;
 }
 
-.editForm input:focus {
-  border-color: #b71c1c;
-  box-shadow: 0 0 0 2px rgba(183, 28, 28, 0.15);
+.editForm select:focus {
+  border-color: #A30000;
+  box-shadow: 0 0 0 3px rgba(163, 0, 0, 0.18);
+  background: white;
 }
 
 .editActions {
   display: flex;
-  justify-content: space-between;
-  margin-top: 20px;
-  gap: 10px;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 8px;
 }
 
 .saveBtn {
-  flex: 1;
-  background: #2e7d32;
-  color: #fff;
+  background: #A30000;
+  color: white;
+  padding: 10px 16px;
+  border-radius: 10px;
   border: none;
-  padding: 10px 0;
-  border-radius: 8px;
-  cursor: pointer;
   font-weight: 600;
-  transition: 0.3s;
+  cursor: pointer;
+  transition: 0.25s;
 }
 
 .saveBtn:hover {
-  background: #1b5e20;
+  background: #CC0000;
+  transform: translateY(-2px);
 }
 
 .cancelBtn {
-  flex: 1;
-  background: #b71c1c;
-  color: #fff;
+  background: #e6e6e6;
+  color: #333;
+  padding: 10px 16px;
+  border-radius: 10px;
   border: none;
-  padding: 10px 0;
-  border-radius: 8px;
-  cursor: pointer;
   font-weight: 600;
-  transition: 0.3s;
+  cursor: pointer;
+  transition: 0.25s;
 }
 
 .cancelBtn:hover {
-  background: #8e0000;
+  background: #d4d4d4;
+  transform: translateY(-2px);
 }
 
-/* ✨ Animations */
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
+/* Animations */
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 @keyframes slideUp {
-  from {
-    transform: translateY(40px);
-    opacity: 0;
-  }
-  to {
-    transform: translateY(0);
-    opacity: 1;
-  }
+  from { transform: translateY(40px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
 }
 
-/* 📱 Responsive */
+/* Responsive */
 @media (max-width: 768px) {
-  .filters {
+  .filtersRow {
     flex-direction: column;
-    align-items: flex-start;
-    width: 100%;
   }
-
-  .searchWrapper {
-    width: 100%;
+  .searchWrapper,
+  .statusFilters {
     max-width: 100%;
   }
-
-  .cardGrid {
-    grid-template-columns: 1fr;
-    gap: 16px;
-  }
-
-  .contentSection {
-    padding: 18px;
-  }
-
-  .pageTitle {
-    font-size: 1.3rem;
-  }
-
-  .modalContent {
-    width: 90%;
-  }
-
-  .editModal {
-    width: 90%;
+  .statusFilters {
+    justify-content: flex-start;
+    flex-wrap: wrap;
   }
 }

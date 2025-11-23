@@ -1,15 +1,20 @@
+:root {
+  --card-radius: 14px;
+}
+
+/* MAIN CONTAINER */
 .container {
   padding: 24px;
   background-color: #d9d9d9;
   min-height: 100vh;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
 }
 
 .contentSection {
   background-color: white;
   padding: 24px;
-  border-radius: 12px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  border-radius: var(--card-radius);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
 }
 
 .pageTitle {
@@ -34,62 +39,64 @@
   flex-wrap: wrap;
 }
 
-/* ---------- FIRST ROW ---------- */
+/* ---------- TOP ROW (Time, Temp, Analytics) ---------- */
 .topRow {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
   gap: 20px;
-  flex-wrap: wrap;
-  margin-bottom: 20px;
+  margin-bottom: 25px;
+  align-items: stretch;
 }
 
-.cardTime,
-.cardTemperature {
-  flex: 1 1 300px;
+.topCard {
+  height: 160px;
+  padding: 30px;
+  border-radius: var(--card-radius);
   display: flex;
-  align-items: center;
   justify-content: center;
-  border-radius: 12px;
-  color: white;
-  height: 110px;
-  position: relative;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-}
-
-/* TIME CARD */
-.cardTime {
-  background: linear-gradient(135deg, #f3ae2f, #e47119);
-  position: relative;
+  align-items: center;
+  text-align: center;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
   overflow: hidden;
 }
 
-.timeIcon {
-  position: absolute;
-  left: 25px;
-  font-size: 65px;
-  opacity: 0.9;
+/* ---------- TIME CARD ---------- */
+.cardTime {
+  background: linear-gradient(135deg, #f3ae2f, #e47119);
+  padding-top: 20px;
+  color: white;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  border-radius: var(--card-radius);
 }
 
-.timeInfo {
-  text-align: center;
+.timeIcon {
+  font-size: 55px;
+  opacity: 0.9;
 }
 
 .timeText {
   font-size: 32px;
   font-weight: 700;
-  margin: 0;
 }
 
 .dateText {
-  font-size: 16px;
-  font-weight: 500;
-  margin: 5px 0 0;
+  font-size: 15px;
+  opacity: 0.9;
 }
 
-/* TEMPERATURE CARD */
+/* ---------- TEMPERATURE CARD ---------- */
 .cardTemperature {
+  display: flex;
   flex-direction: column;
   justify-content: center;
-  text-align: center;
+  align-items: center;
+  padding: 30px;
+  border-radius: var(--card-radius);
+  color: white;
 }
 
 .hotTemp {
@@ -103,37 +110,32 @@
 .tempValue {
   font-size: 36px;
   font-weight: 700;
-  margin: 0;
 }
 
 .tempStatus {
   font-size: 14px;
-  font-weight: 500;
-  opacity: 0.9;
   margin-top: 5px;
+  opacity: 0.9;
 }
 
-/* ---------- SECOND ROW (SUMMARY DATA) ---------- */
+/* ---------- SUMMARY ROW ---------- */
 .summaryRow {
   display: flex;
   gap: 20px;
   flex-wrap: wrap;
 }
 
-/* Base style for all summary cards */
 .summaryCard {
   flex: 1 1 300px;
-  border-radius: 12px;
+  border-radius: var(--card-radius);
   padding: 24px;
   text-align: center;
   position: relative;
   overflow: hidden;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
   transition: color 0.4s ease;
-  z-index: 1;
 }
 
-/* ::before for sliding background */
 .summaryCard::before {
   content: "";
   position: absolute;
@@ -145,13 +147,12 @@
   z-index: 0;
 }
 
-/* ensure content above bg */
 .summaryCard * {
   position: relative;
   z-index: 2;
 }
 
-/* ---- DEFAULT COLORS ---- */
+/* Colors */
 .usersCard {
   background: #fff3e0;
   color: #e65100;
@@ -167,7 +168,7 @@
   color: #6a1b9a;
 }
 
-/* ---- SLIDING HOVER ANIMATION ---- */
+/* Hover gradients */
 .usersCard::before {
   background: linear-gradient(135deg, #ffb347, #ff9800);
 }
@@ -188,11 +189,10 @@
   color: white;
 }
 
-/* HEADINGS */
+/* Summary text */
 .summaryCard h4 {
   font-size: 18px;
   font-weight: 600;
-  margin-bottom: 8px;
 }
 
 .summaryValue {
@@ -200,36 +200,203 @@
   font-weight: 700;
 }
 
+/* ---------- ANALYTICS CARD (GREEN THEME) ---------- */
+.monthlyCard {
+  background: #f0fdf4; /* light green background */
+  color: #1b5e20;      /* dark green text */
+  border-radius: var(--card-radius);
+  padding: 22px;
+  transition: 0.3s;
+  position: relative;
+}
+
+/* Hover sliding gradient */
+.monthlyCard::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  z-index: -1;
+  transition: 0.4s ease;
+  background: linear-gradient(135deg, #43a047, #2e7d32); /* GREEN GRADIENT */
+}
+
+/* Hover effect */
+.monthlyCard:hover::before {
+  left: 0;
+}
+
+.monthlyCard:hover {
+  color: white;
+  transform: translateY(-3px);
+}
+
+.analyticsTitle {
+  font-size: 1.3rem;
+  font-weight: 700;
+}
+
+.analyticsIcon {
+  font-size: 2.6rem;
+  color: #1b5e20; /* or your green/red theme */
+  transition: 0.3s;
+}
+
+.monthlyCard:hover .analyticsIcon {
+  color: white;
+  transform: translateY(-3px);
+}
+
+
+/* ----------- MODERN OVERLAY (Glass Blur) ----------- */
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  backdrop-filter: blur(6px);
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 99999;
+  animation: fadeIn 0.2s ease-out;
+}
+
+/* ----------- MODERN POPUP BOX ----------- */
+.modalBox {
+  width: 650px;
+  max-width: 90%;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 18px;
+  padding: 28px 30px;
+  box-shadow: 0 12px 35px rgba(0, 0, 0, 0.25);
+  backdrop-filter: blur(20px);
+  animation: slideUp 0.25s ease-out;
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  position: relative;
+}
+
+/* ----------- TITLE ----------- */
+.modalTitle {
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: #A30000;
+  margin: 0;
+  text-align: center;
+  padding-bottom: 15px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+/* ----------- SELECTORS ----------- */
+.selectorRow {
+  margin-top: 20px;
+  display: flex;
+  justify-content: center;
+  gap: 18px;
+}
+
+.selector {
+  padding: 10px 14px;
+  background: #ffffff;
+  border-radius: 10px;
+  border: 2px solid #43a047;
+  color: #2e7d32;
+  font-weight: 600;
+  font-size: 14px;
+  transition: 0.25s;
+}
+
+.selector:hover {
+  border-color: #66bb6a;
+  background: #f1fff4;
+}
+
+/* ----------- CHART AREA ----------- */
+.chartContainer {
+  width: 100%;
+  height: 320px;
+  margin-top: 25px;
+  background: #ffffff !important;
+  border-radius: 14px;
+  border: 1px solid #c8e6c9;
+  padding: 10px;
+  box-shadow: inset 0 0 12px rgba(0,0,0,0.05);
+}
+
+/* ----------- CLOSE BUTTON (SLIDING RED) ----------- */
+.closeBtn {
+  margin-top: 25px;
+  background: #A30000;
+  color: white;
+  padding: 13px;
+  border-radius: 12px;
+  width: 100%;
+  font-size: 15px;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  transition: 0.35s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+/* sliding effect */
+.closeBtn::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: #CC0000; /* lighter red on hover */
+  transition: 0.35s ease;
+  border-radius: 12px;
+}
+
+.closeBtn span {
+  position: relative;
+  z-index: 2;
+}
+
+.closeBtn:hover::after {
+  left: 0;
+}
+
+.closeBtn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(163, 0, 0, 0.4);
+  color: #ffffff;
+}
+
+/* ----------- ANIMATIONS ----------- */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(30px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
 /* ---------- RESPONSIVE ---------- */
 @media (max-width: 768px) {
-  .topRow,
+
+  .topRow {
+    grid-template-columns: 1fr;
+  }
+
+  .topCard {
+    height: auto;
+    padding: 25px;
+  }
+
   .summaryRow {
     flex-direction: column;
   }
 
-  .cardTime,
-  .cardTemperature {
-    flex: 1 1 100%;
-    height: 90px;
-  }
-
   .timeIcon {
     display: none;
-  }
-
-  .timeText {
-    font-size: 26px;
-  }
-
-  .dateText {
-    font-size: 14px;
-  }
-
-  .tempValue {
-    font-size: 28px;
-  }
-
-  .summaryCard {
-    flex: 1 1 100%;
   }
 }

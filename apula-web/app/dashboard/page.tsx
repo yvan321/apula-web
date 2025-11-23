@@ -3,29 +3,40 @@
 import React, { useState, useEffect } from "react";
 import AdminHeader from "@/components/shared/adminHeader";
 import styles from "./adminDashboardStyles.module.css";
-import { FaRegClock } from "react-icons/fa";
+import { FaRegClock, FaChartLine } from "react-icons/fa";
 
 import { db } from "@/lib/firebase";
 import { collection, onSnapshot, query, where } from "firebase/firestore";
 
-// 🔔 Import Bell + Modal
 import AlertBellButton from "@/components/AlertDispatch/AlertBellButton";
 import AlertDispatchModal from "@/components/AlertDispatch/AlertDispatchModal";
+
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  CartesianGrid,
+  ResponsiveContainer,
+} from "recharts";
 
 const AdminDashboard = () => {
   const [time, setTime] = useState("");
   const [date, setDate] = useState("");
 
-  // 🔥 Firestore counts
   const [userCount, setUserCount] = useState(0);
   const [activeAlertCount, setActiveAlertCount] = useState(0);
   const [resolvedCount, setResolvedCount] = useState(0);
 
-  const [temperature, setTemperature] = useState(31); // static sample
+  const [temperature] = useState(31);
 
-  // =============================
-  // 🕒 UPDATE TIME + DATE
-  // =============================
+  const [monthData, setMonthData] = useState([]);
+  const [showMonthlyModal, setShowMonthlyModal] = useState(false);
+
+  const tempClass = temperature >= 32 ? styles.hotTemp : styles.coolTemp;
+
+  /* ---------------------- TIME & DATE ---------------------- */
   useEffect(() => {
     const updateTime = () => {
       const now = new Date();
@@ -51,130 +62,197 @@ const AdminDashboard = () => {
     return () => clearInterval(timer);
   }, []);
 
-  // =============================
-  // 📊 REGISTERED USERS COUNT
-  // =============================
+  /* ---------------------- USERS ---------------------- */
   useEffect(() => {
-    const unsub = onSnapshot(collection(db, "users"), (snap) => {
-      setUserCount(snap.size);
-    });
+    const unsub = onSnapshot(collection(db, "users"), (snap) =>
+      setUserCount(snap.size)
+    );
     return () => unsub();
   }, []);
 
-  // =============================
-  // 📊 ACTIVE ALERT COUNT
-  // =============================
+  /* ---------------------- ACTIVE ALERTS ---------------------- */
   useEffect(() => {
     const q = query(
       collection(db, "alerts"),
       where("status", "!=", "Resolved")
     );
-
-    const unsub = onSnapshot(q, (snap) => {
-      setActiveAlertCount(snap.size);
-    });
-
+    const unsub = onSnapshot(q, (snap) => setActiveAlertCount(snap.size));
     return () => unsub();
   }, []);
 
-  // =============================
-  // 📊 RESOLVED ALERT COUNT
-  // =============================
+  /* ---------------------- RESOLVED ALERTS ---------------------- */
   useEffect(() => {
     const q = query(
       collection(db, "alerts"),
       where("status", "==", "Resolved")
     );
+    const unsub = onSnapshot(q, (snap) => setResolvedCount(snap.size));
+    return () => unsub();
+  }, []);
 
-    const unsub = onSnapshot(q, (snap) => {
-      setResolvedCount(snap.size);
+  /* ---------------------- ALL ALERTS (FULL YEAR GRAPH) ---------------------- */
+  useEffect(() => {
+    const q = collection(db, "alerts");
+
+    const unsub = onSnapshot(q, (snapshot) => {
+      const monthly = {
+        0: 0,
+        1: 0,
+        2: 0,
+        3: 0,
+        4: 0,
+        5: 0,
+        6: 0,
+        7: 0,
+        8: 0,
+        9: 0,
+        10: 0,
+        11: 0,
+      };
+
+      snapshot.forEach((doc) => {
+        const data = doc.data();
+        if (!data.createdAt) return;
+
+        const m = data.createdAt.toDate().getMonth();
+        monthly[m] += 1;
+      });
+
+      const formatted = Object.keys(monthly).map((m) => ({
+        month: [
+          "Jan",
+          "Feb",
+          "Mar",
+          "Apr",
+          "May",
+          "Jun",
+          "Jul",
+          "Aug",
+          "Sep",
+          "Oct",
+          "Nov",
+          "Dec",
+        ][m],
+        alerts: monthly[m],
+      }));
+
+      setMonthData(formatted);
     });
 
     return () => unsub();
   }, []);
 
-  // =============================
-  // 🌡️ TEMPERATURE DISPLAY
-  // =============================
-  const tempClass = temperature >= 32 ? styles.hotTemp : styles.coolTemp;
-
   return (
     <div>
       <AdminHeader />
 
-      {/* 🔔 Bell Icon at top-right */}
       <div style={{ position: "absolute", top: 20, right: 30, zIndex: 50 }}>
         <AlertBellButton />
       </div>
-
-      {/* 🚨 Alert Dispatch Modal (opens when bell is clicked) */}
       <AlertDispatchModal />
 
       <div className={styles.container}>
-        <div data-aos="fade-up" className={styles.contentSection}>
-          <div className={styles.headerRow}>
-            <h2 className={styles.pageTitle}>Admin Dashboard</h2>
-          </div>
-
+        <div className={styles.contentSection}>
+          <h2 className={styles.pageTitle}>Admin Dashboard</h2>
           <hr className={styles.separator} />
 
-          {/* 
-          ================================
-            1ST ROW – TIME + TEMPERATURE
-          ================================
-          */}
+          {/* ---------------- TOP ROW ---------------- */}
           <div className={styles.topRow}>
-            {/* 🕒 TIME CARD */}
-            <div className={styles.cardTime}>
+            {/* TIME */}
+            <div className={`${styles.topCard} ${styles.cardTime}`}>
               <FaRegClock className={styles.timeIcon} />
-              <div className={styles.timeInfo}>
-                <p className={styles.timeText}>{time}</p>
-                <p className={styles.dateText}>{date}</p>
-              </div>
+              <p className={styles.timeText}>{time}</p>
+              <p className={styles.dateText}>{date}</p>
             </div>
 
-            {/* 🌡️ TEMPERATURE CARD */}
-            <div className={`${styles.cardTemperature} ${tempClass}`}>
+            {/* TEMP */}
+            <div
+              className={`${styles.topCard} ${styles.cardTemperature} ${tempClass}`}
+            >
               <h3 className={styles.tempValue}>{temperature}°C</h3>
               <p className={styles.tempStatus}>
                 {temperature >= 32 ? "Hot" : "Cool"} Weather in Bacoor City
               </p>
             </div>
+
+            {/* ANALYTICS */}
+            <div
+              className={`${styles.topCard} ${styles.monthlyCard}`}
+              style={{
+                cursor: "pointer",
+                display: "flex",
+                flexDirection: "column", 
+                justifyContent: "center",
+                alignItems: "center",
+                textAlign: "center",
+                gap: "0px",
+              }}
+              onClick={() => setShowMonthlyModal(true)}
+            >
+              <FaChartLine className={styles.analyticsIcon} />
+
+              <div>
+                <h4 className={styles.analyticsTitle}>ANALYTICS</h4>
+                <p className={styles.summaryLabel}>Fire Alerts (Yearly)</p>
+              </div>
+            </div>
           </div>
 
-          {/* 
-          ================================
-            2ND ROW – SUMMARY CARDS
-          ================================
-          */}
+          {/* ---------------- SUMMARY ROW ---------------- */}
           <div className={styles.summaryRow}>
-            {/* Users */}
             <div className={`${styles.summaryCard} ${styles.usersCard}`}>
               <h4>Registered Users</h4>
               <p className={styles.summaryValue}>{userCount}</p>
               <p className={styles.summaryLabel}>App users & responders</p>
             </div>
 
-            {/* Active Alerts */}
             <div className={`${styles.summaryCard} ${styles.respondersCard}`}>
               <h4>Active Alerts</h4>
               <p className={styles.summaryValue}>{activeAlertCount}</p>
-              <p className={styles.summaryLabel}>
-                Fire alerts not yet resolved
-              </p>
+              <p className={styles.summaryLabel}>Not yet resolved</p>
             </div>
 
-            {/* Resolved */}
             <div className={`${styles.summaryCard} ${styles.callsCard}`}>
               <h4>Resolved Incidents</h4>
               <p className={styles.summaryValue}>{resolvedCount}</p>
-              <p className={styles.summaryLabel}>
-                Completed & verified responses
-              </p>
+              <p className={styles.summaryLabel}>Verified responses</p>
             </div>
           </div>
         </div>
       </div>
+
+      {/* ---------------- MODERN POPUP ---------------- */}
+      {showMonthlyModal && (
+        <div className={styles.modalOverlay}>
+          <div className={styles.modalBox}>
+            <h2 className={styles.modalTitle}>Yearly Fire Alerts Overview</h2>
+
+            {/* CHART */}
+            <div className={styles.chartContainer}>
+              <ResponsiveContainer>
+                <BarChart data={monthData}>
+                  <CartesianGrid stroke="#eeeeee" strokeDasharray="3 3" />
+                  <XAxis dataKey="month" angle={-30} textAnchor="end" />
+                  <YAxis />
+                  <Tooltip />
+                  <Bar
+                    dataKey="alerts"
+                    fill="#2e7d32"
+                    radius={[10, 10, 0, 0]}
+                  />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+
+            <button
+              className={styles.closeBtn}
+              onClick={() => setShowMonthlyModal(false)}
+            >
+              <span>Close</span>
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
