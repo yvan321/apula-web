@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import styles from "@/app/dashboard/dispatch/dispatch.module.css"; // <-- use SAME styling
+import styles from "@/app/dashboard/dispatch/dispatch.module.css";
 
 import {
   collection,
@@ -19,7 +19,6 @@ import { db } from "@/lib/firebase";
 
 const AlertDispatchModal = () => {
   const [showModal, setShowModal] = useState(false);
-
   const [alerts, setAlerts] = useState<any[]>([]);
   const [selectedAlert, setSelectedAlert] = useState<any>(null);
 
@@ -29,11 +28,12 @@ const AlertDispatchModal = () => {
 
   const [showSuccess, setShowSuccess] = useState(false);
 
-  // Listen for bell-button event
+  // Open modal via event
   useEffect(() => {
     const openModal = () => {
       loadAlerts();
       setShowModal(true);
+      setSelectedAlert(null); // always reset when opening
     };
 
     window.addEventListener("open-alert-dispatch", openModal);
@@ -53,7 +53,7 @@ const AlertDispatchModal = () => {
     setAlerts(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
   };
 
-  // Load responders (real-time)
+  // Realtime responders
   useEffect(() => {
     const unsub = onSnapshot(
       query(collection(db, "users"), where("role", "==", "responder")),
@@ -123,12 +123,10 @@ const AlertDispatchModal = () => {
         timestamp: serverTimestamp(),
       });
 
-      // Update responders → dispatched
       selected.forEach((r) =>
         batch.update(doc(db, "users", r.id), { status: "Dispatched" })
       );
 
-      // Update alert
       batch.update(doc(db, "alerts", selectedAlert.id), { status: "Dispatched" });
 
       await batch.commit();
@@ -153,59 +151,57 @@ const AlertDispatchModal = () => {
     <div className={styles.modalOverlay}>
       <div className={styles.modalWide}>
 
-        {/* =======================================================
-             STEP 1 — SELECT ALERT
-        ======================================================== */}
-        {!selectedAlert && (
-          <>
-            <h3 className={styles.modalTitle}>Select Alert</h3>
+        {/* STEP 1 — SELECT ALERT */}
+     {/* STEP 1 — SELECT ALERT */}
+{!selectedAlert && (
+  <>
+    <h3 className={styles.modalTitle}>Select Alert</h3>
 
-            <div className={styles.tableScroll}>
-              <table className={styles.alertTable}>
-                <thead>
-                  <tr>
-                    <th>Type</th>
-                    <th>Location</th>
-                    <th>Reporter</th>
-                    <th>Contact</th>
-                    <th>Email</th>
-                    <th>Address</th>
-                    <th>Select</th>
-                  </tr>
-                </thead>
+    <div className={styles.tableScroll}>
+      <table className={styles.alertTable}>
+        <thead>
+          <tr>
+            <th>Reporter</th>
+            <th>Contact</th>
+            <th>Address</th>
+            <th>Select</th>
+          </tr>
+        </thead>
 
-                <tbody>
-                  {alerts.map((alert) => (
-                    <tr key={alert.id}>
-                      <td> {alert.type}</td>
-                      <td>{alert.location}</td>
-                      <td>{alert.userName}</td>
-                      <td>{alert.userContact}</td>
-                    {   }  <td>{alert.userEmail}</td>
-                      <td>{alert.userAddress}</td>
-                      <td>
-                        <button
-                          className={styles.assignBtn}
-                          onClick={() => selectAlert(alert)}
-                        >
-                          Select
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+        <tbody>
+          {alerts.map((alert) => (
+            <tr key={alert.id}>
+              <td>{alert.userName}</td>
+              <td>{alert.userContact}</td>
+              <td>{alert.userAddress}</td>
+              <td>
+                <button
+                  className={styles.assignBtn}
+                  onClick={() => selectAlert(alert)}
+                >
+                  Select
+                </button>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
 
-            <button className={styles.closeBtn} onClick={() => setShowModal(false)}>
-              Close
-            </button>
-          </>
-        )}
+    <button
+      className={styles.closeBtn}
+      onClick={() => {
+        setShowModal(false);
+        setSelectedAlert(null);
+      }}
+    >
+      Close
+    </button>
+  </>
+)}
 
-        {/* =======================================================
-             STEP 2 — SELECT RESPONDERS
-        ======================================================== */}
+
+        {/* STEP 2 — SELECT RESPONDERS */}
         {selectedAlert && (
           <>
             <h3 className={styles.modalTitle}>Select Responders</h3>
@@ -259,7 +255,14 @@ const AlertDispatchModal = () => {
                 Dispatch Selected
               </button>
 
-              <button className={styles.closeBtn} onClick={() => setShowModal(false)}>
+              {/* FIX: Close modal and reset to Step 1 */}
+              <button
+                className={styles.closeBtn}
+                onClick={() => {
+                  setSelectedAlert(null);
+                  setShowModal(false);
+                }}
+              >
                 Close
               </button>
             </div>

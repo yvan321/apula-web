@@ -346,55 +346,50 @@ setTimeout(() => setShowSuccessModal(false), 2500);
       )}
 
       {/* ALERT SELECTION MODAL (TABLE VERSION) */}
-      {alerts.length > 0 && !showResponderModal && selectedAlert === null && (
-        <div className={styles.modalOverlay} onClick={() => setAlerts([])}>
-          <div className={styles.modalWide} onClick={(e) => e.stopPropagation()}>
-            <h3 className={styles.modalTitle}>Select Alert</h3>
+{alerts.length > 0 && !showResponderModal && selectedAlert === null && (
+  <div className={styles.modalOverlay} onClick={() => setAlerts([])}>
+    <div className={styles.modalWide} onClick={(e) => e.stopPropagation()}>
+      <h3 className={styles.modalTitle}>Select Alert</h3>
 
-            <div className={styles.tableScroll}>
-              <table className={styles.alertTable}>
-                <thead>
-                  <tr>
-                    <th>Type</th>
-                    <th>Location</th>
-                    <th>Reporter</th>
-                    <th>Contact</th>
-                    <th>Email</th>
-                    <th>Address</th>
-                    <th>Select</th>
-                  </tr>
-                </thead>
+      <div className={styles.tableScroll}>
+        <table className={styles.alertTable}>
+          <thead>
+            <tr>
+              <th>Reporter</th>
+              <th>Contact</th>
+              <th>Address</th>
+              <th>Select</th>
+            </tr>
+          </thead>
 
-                <tbody>
-                  {alerts.map((alert) => (
-                    <tr key={alert.id}>
-                      <td>{alert.type}</td>
-                      <td>{alert.location}</td>
-                      <td>{alert.userName}</td>
-                      <td>{alert.userContact}</td>
-                      <td>{alert.userEmail}</td>
-                      <td>{alert.userAddress}</td>
+          <tbody>
+            {alerts.map((alert) => (
+              <tr key={alert.id}>
+                <td>{alert.userName}</td>
+                <td>{alert.userContact}</td>
+                <td>{alert.userAddress}</td>
 
-                      <td>
-                        <button
-                          className={styles.assignBtn}
-                          onClick={() => selectAlertForDispatch(alert)}
-                        >
-                          Select
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                <td>
+                  <button
+                    className={styles.assignBtn}
+                    onClick={() => selectAlertForDispatch(alert)}
+                  >
+                    Select
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
 
-            <button className={styles.closeBtn} onClick={() => setAlerts([])}>
-              Close
-            </button>
-          </div>
-        </div>
-      )}
+      <button className={styles.closeBtn} onClick={() => setAlerts([])}>
+        Close
+      </button>
+    </div>
+  </div>
+)}
+
 
       {/* RESPONDER SELECTION MODAL (TABLE VERSION) */}
       {showResponderModal && (

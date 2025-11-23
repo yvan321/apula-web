@@ -1,10 +1,7 @@
 import type { Metadata } from "next";
 import { Poppins } from "next/font/google";
 import "./globals.css";
-import { AlertProvider } from "@/context/AlertContext";
-import AlertDispatchModal from "@/components/AlertDispatch/AlertDispatchModal";
 import GlobalLoader from "@/components/GlobalLoader";
-
 
 const poppins = Poppins({
   subsets: ["latin"],
@@ -27,13 +24,9 @@ export default function RootLayout({
     <html lang="en">
       <body className={poppins.variable}>
         <GlobalLoader />
-        <AlertProvider>
-          {/* 🔥 Global Dispatch Modal - Always Active */}
-          <AlertDispatchModal />
 
-          {/* Your main content */}
-          {children}
-        </AlertProvider>
+        {/* Main Content */}
+        {children}
       </body>
     </html>
   );
