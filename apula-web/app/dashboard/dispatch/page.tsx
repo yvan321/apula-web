@@ -267,7 +267,9 @@ setTimeout(() => setShowSuccessModal(false), 2500);
             </thead>
 
             <tbody>
-              {filteredResponders.map((r) => (
+              {filteredResponders
+    .filter((r) => r.status !== "Unavailable")
+    .map((r) => (
                 <tr key={r.id}>
                   <td>{r.id.slice(0, 6)}…</td>
                   <td>{r.name}</td>
@@ -414,7 +416,7 @@ setTimeout(() => setShowSuccessModal(false), 2500);
                 </thead>
 
                 <tbody>
-                  {responders.map((r) => (
+                  {responders.filter(r => r.status !== "Unavailable").map((r) => (
                     <tr key={r.id}>
                       <td>
                        <input

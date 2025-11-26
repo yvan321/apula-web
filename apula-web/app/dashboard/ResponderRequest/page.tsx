@@ -1,139 +1,155 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import AdminHeader from "@/components/shared/adminHeader";
-import AlertBellButton from "@/components/AlertDispatch/AlertBellButton";
-import AlertDispatchModal from "@/components/AlertDispatch/AlertDispatchModal";
-import styles from "./responderRequest.module.css";
+import { db } from "@/lib/firebase";
+
+import {
+  collection,
+  query,
+  where,
+  getDocs,
+  updateDoc,
+  doc,
+} from "firebase/firestore";
+
 import { FaUserCheck, FaUserTimes, FaSearch } from "react-icons/fa";
+import styles from "./responderRequest.module.css";
 
 const ResponderRequestsPage = () => {
+  const [responders, setResponders] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedResponder, setSelectedResponder] = useState(null);
-  const [confirmAction, setConfirmAction] = useState(null); // accept / decline
+  const [confirmAction, setConfirmAction] = useState(null);
 
-  // ✅ Sample data (pending requests)
-  const responderRequests = [
-    {
-      id: 1,
-      name: "LeBron James",
-      department: "Fire Department",
-      contact: "09181234567",
-      address: "Imus City, Cavite",
-      email: "lebronresponder@gmail.com",
-      created_time: "2025-02-05 09:45",
-    },
-    {
-      id: 2,
-      name: "Stephen Curry",
-      department: "Fire Department",
-      contact: "09174561234",
-      address: "Bacoor City, Cavite",
-      email: "scurryresponder@gmail.com",
-      created_time: "2025-03-12 10:12",
-    },
-  ];
+  // 🔥 Load pending responders (verified but NOT approved)
+  useEffect(() => {
+    const loadResponders = async () => {
+      try {
+        const q = query(
+          collection(db, "users"),
+          where("role", "==", "responder"),
+          where("verified", "==", true),   // Email verified
+          where("approved", "==", false)   // Waiting for admin approval
+        );
 
-  // ✅ Filter by search
-  const filteredResponders = responderRequests.filter(
-    (r) =>
-      r.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      r.department.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      r.email.toLowerCase().includes(searchTerm.toLowerCase())
+        const querySnapshot = await getDocs(q);
+        const list: any[] = [];
+
+        querySnapshot.forEach((docSnap) => {
+          list.push({ id: docSnap.id, ...docSnap.data() });
+        });
+
+        setResponders(list);
+      } catch (error) {
+        console.error("Error loading responders:", error);
+      }
+    };
+
+    loadResponders();
+  }, []);
+
+  // 🔍 Filter by search
+  const filtered = responders.filter((r: any) =>
+    `${r.name} ${r.email}`.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // ✅ Open/close modal
-  const openModal = (responder) => setSelectedResponder(responder);
-  const closeModal = () => setSelectedResponder(null);
-
-  // ✅ Confirm action (accept/decline)
-  const handleConfirm = (action, responder) => {
+  // ⚡ Choose accept or decline
+  const handleAction = (action: string, responder: any) => {
     setConfirmAction({ action, responder });
   };
 
-  const executeAction = () => {
-    if (confirmAction) {
-      const { action, responder } = confirmAction;
+  // 🚀 Firestore update when admin Approves/Declines
+  const executeAction = async () => {
+    if (!confirmAction) return;
+
+    const { responder, action } = confirmAction;
+
+    try {
+      const ref = doc(db, "users", responder.id);
+
+      if (action === "accept") {
+        await updateDoc(ref, {
+          approved: true,
+          status: "Available", // NEW responders become available
+        });
+      } else {
+        await updateDoc(ref, {
+          approved: false,
+          status: "declined",
+        });
+      }
+
+      // Remove from UI after action
+      setResponders((prev) => prev.filter((r: any) => r.id !== responder.id));
+
       alert(
-        `Responder ${responder.name} has been ${
-          action === "accept" ? "accepted" : "declined"
+        `${responder.name} has been ${
+          action === "accept" ? "approved" : "declined"
         }.`
       );
-      setConfirmAction(null);
+    } catch (err) {
+      console.error("Error updating:", err);
+      alert("Failed to update responder.");
     }
+
+    setConfirmAction(null);
   };
 
   return (
     <div>
       <AdminHeader />
 
-      {/* 🔔 Bell Icon at top-right */}
-      <div style={{ position: "absolute", top: 20, right: 30, zIndex: 50 }}>
-        <AlertBellButton />
-      </div>
-
-      {/* 🚨 Alert Dispatch Modal (opens when bell is clicked) */}
-      <AlertDispatchModal />
-
-
       <div className={styles.container}>
-        <div data-aos="fade-up" className={styles.contentSection}>
-          {/* Header */}
-          <div className={styles.headerRow}>
-            <h2 className={styles.pageTitle}>Responder Requests</h2>
-          </div>
+        <div className={styles.contentSection}>
+          <h2 className={styles.pageTitle}>Responder Requests</h2>
           <hr className={styles.separator} />
 
-          {/* Search Filter */}
+          {/* Search */}
           <div className={styles.filters}>
             <div className={styles.searchWrapper}>
               <FaSearch className={styles.searchIcon} size={18} />
               <input
                 type="text"
                 placeholder="Search responder..."
-                className={styles.searchInput}
                 value={searchTerm}
+                className={styles.searchInput}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
           </div>
 
-          {/* Table Section */}
+          {/* Table */}
           <div className={styles.tableSection}>
             <table className={styles.userTable}>
               <thead>
                 <tr>
-                  <th>ID</th>
                   <th>Name</th>
-                  <th>Department</th>
                   <th>Email</th>
+                  <th>Address</th>
+                  <th>Status</th>
                   <th>Actions</th>
                 </tr>
               </thead>
+
               <tbody>
-                {filteredResponders.length > 0 ? (
-                  filteredResponders.map((r) => (
+                {filtered.length ? (
+                  filtered.map((r: any) => (
                     <tr key={r.id}>
-                      <td data-label="ID">{r.id}</td>
-                      <td data-label="Name">{r.name}</td>
-                      <td data-label="Department">{r.department}</td>
-                      <td data-label="Email">{r.email}</td>
-                      <td data-label="Actions">
-                        <button
-                          className={styles.viewBtn}
-                          onClick={() => openModal(r)}
-                        >
-                          View
-                        </button>
+                      <td>{r.name}</td>
+                      <td>{r.email}</td>
+                      <td>{r.address}</td>
+                      <td>{r.status}</td>
+                      <td>
                         <button
                           className={styles.acceptBtn}
-                          onClick={() => handleConfirm("accept", r)}
+                          onClick={() => handleAction("accept", r)}
                         >
                           <FaUserCheck /> Accept
                         </button>
+
                         <button
                           className={styles.declineBtn}
-                          onClick={() => handleConfirm("decline", r)}
+                          onClick={() => handleAction("decline", r)}
                         >
                           <FaUserTimes /> Decline
                         </button>
@@ -142,8 +158,8 @@ const ResponderRequestsPage = () => {
                   ))
                 ) : (
                   <tr>
-                    <td colSpan="5" className={styles.noResults}>
-                      No responder requests found.
+                    <td colSpan={5} className={styles.noResults}>
+                      No pending responders.
                     </td>
                   </tr>
                 )}
@@ -153,46 +169,22 @@ const ResponderRequestsPage = () => {
         </div>
       </div>
 
-      {/* ✅ Popup Modal for Details */}
-      {selectedResponder && (
-        <div className={styles.modalOverlay} onClick={closeModal}>
-          <div
-            className={styles.modalContent}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h3 className={styles.modalTitle}>Responder Information</h3>
-            <div className={styles.modalDetails}>
-              <p><strong>Name:</strong> {selectedResponder.name}</p>
-              <p><strong>Department:</strong> {selectedResponder.department}</p>
-              <p><strong>Contact:</strong> {selectedResponder.contact}</p>
-              <p><strong>Address:</strong> {selectedResponder.address}</p>
-              <p><strong>Email:</strong> {selectedResponder.email}</p>
-              <p><strong>Created Time:</strong> {selectedResponder.created_time}</p>
-            </div>
-            <button className={styles.closeBtn} onClick={closeModal}>
-              Close
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* ✅ Confirmation Modal */}
+      {/* Confirmation Modal */}
       {confirmAction && (
-        <div className={styles.modalOverlay} onClick={() => setConfirmAction(null)}>
-          <div
-            className={styles.confirmModal}
-            onClick={(e) => e.stopPropagation()}
-          >
+        <div className={styles.modalOverlay}>
+          <div className={styles.confirmModal}>
             <h3>
               {confirmAction.action === "accept"
                 ? "Accept Responder"
                 : "Decline Responder"}
             </h3>
+
             <p>
               Are you sure you want to{" "}
-              {confirmAction.action === "accept" ? "accept" : "decline"}{" "}
+              {confirmAction.action === "accept" ? "approve" : "decline"}{" "}
               <strong>{confirmAction.responder.name}</strong>?
             </p>
+
             <div className={styles.confirmButtons}>
               <button
                 className={styles.cancelBtn}
@@ -200,6 +192,7 @@ const ResponderRequestsPage = () => {
               >
                 Cancel
               </button>
+
               <button
                 className={
                   confirmAction.action === "accept"

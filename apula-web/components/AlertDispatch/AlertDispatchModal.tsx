@@ -223,7 +223,10 @@ const AlertDispatchModal = () => {
                 </thead>
 
                 <tbody>
-                  {responders.map((r) => (
+                  {responders
+  .filter((r) => r.status === "Available" || r.status === "Dispatched")
+  .map((r) => (
+
                     <tr key={r.id}>
                       <td>
                         <input
