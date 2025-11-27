@@ -26,14 +26,12 @@ const AlertDispatchModal = () => {
   const [selectedResponderIds, setSelectedResponderIds] = useState<Set<string>>(new Set());
   const [selectAll, setSelectAll] = useState(false);
 
-  const [showSuccess, setShowSuccess] = useState(false);
-
   // Open modal via event
   useEffect(() => {
     const openModal = () => {
       loadAlerts();
       setShowModal(true);
-      setSelectedAlert(null); // always reset when opening
+      setSelectedAlert(null);
     };
 
     window.addEventListener("open-alert-dispatch", openModal);
@@ -131,14 +129,11 @@ const AlertDispatchModal = () => {
 
       await batch.commit();
 
-      setShowSuccess(true);
+      // After dispatch: simply close modal
+      setShowModal(false);
+      setSelectedAlert(null);
+      setSelectedResponderIds(new Set());
 
-      setTimeout(() => {
-        setShowSuccess(false);
-        setShowModal(false);
-        setSelectedAlert(null);
-        setSelectedResponderIds(new Set());
-      }, 2000);
     } catch (err) {
       console.error(err);
       alert("Dispatch failed.");
@@ -152,54 +147,52 @@ const AlertDispatchModal = () => {
       <div className={styles.modalWide}>
 
         {/* STEP 1 — SELECT ALERT */}
-     {/* STEP 1 — SELECT ALERT */}
-{!selectedAlert && (
-  <>
-    <h3 className={styles.modalTitle}>Select Alert</h3>
+        {!selectedAlert && (
+          <>
+            <h3 className={styles.modalTitle}>Select Alert</h3>
 
-    <div className={styles.tableScroll}>
-      <table className={styles.alertTable}>
-        <thead>
-          <tr>
-            <th>Reporter</th>
-            <th>Contact</th>
-            <th>Address</th>
-            <th>Select</th>
-          </tr>
-        </thead>
+            <div className={styles.tableScroll}>
+              <table className={styles.alertTable}>
+                <thead>
+                  <tr>
+                    <th>Reporter</th>
+                    <th>Contact</th>
+                    <th>Address</th>
+                    <th>Select</th>
+                  </tr>
+                </thead>
 
-        <tbody>
-          {alerts.map((alert) => (
-            <tr key={alert.id}>
-              <td>{alert.userName}</td>
-              <td>{alert.userContact}</td>
-              <td>{alert.userAddress}</td>
-              <td>
-                <button
-                  className={styles.assignBtn}
-                  onClick={() => selectAlert(alert)}
-                >
-                  Select
-                </button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+                <tbody>
+                  {alerts.map((alert) => (
+                    <tr key={alert.id}>
+                      <td>{alert.userName}</td>
+                      <td>{alert.userContact}</td>
+                      <td>{alert.userAddress}</td>
+                      <td>
+                        <button
+                          className={styles.assignBtn}
+                          onClick={() => selectAlert(alert)}
+                        >
+                          Select
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
 
-    <button
-      className={styles.closeBtn}
-      onClick={() => {
-        setShowModal(false);
-        setSelectedAlert(null);
-      }}
-    >
-      Close
-    </button>
-  </>
-)}
-
+            <button
+              className={styles.closeBtn}
+              onClick={() => {
+                setShowModal(false);
+                setSelectedAlert(null);
+              }}
+            >
+              Close
+            </button>
+          </>
+        )}
 
         {/* STEP 2 — SELECT RESPONDERS */}
         {selectedAlert && (
@@ -224,31 +217,30 @@ const AlertDispatchModal = () => {
 
                 <tbody>
                   {responders
-  .filter((r) => r.status === "Available" || r.status === "Dispatched")
-  .map((r) => (
+                    .filter((r) => r.status === "Available" || r.status === "Dispatched")
+                    .map((r) => (
+                      <tr key={r.id}>
+                        <td>
+                          <input
+                            type="checkbox"
+                            disabled={r.status !== "Available"}
+                            checked={selectedResponderIds.has(r.id)}
+                            onChange={() => toggleResponder(r.id)}
+                          />
 
-                    <tr key={r.id}>
-                      <td>
-                        <input
-                          type="checkbox"
-                          disabled={r.status !== "Available"}
-                          checked={selectedResponderIds.has(r.id)}
-                          onChange={() => toggleResponder(r.id)}
-                        />
+                          {r.status === "Dispatched" && (
+                            <span className={styles.disabledTag}>Already Dispatched</span>
+                          )}
+                          {r.status === "Unavailable" && (
+                            <span className={styles.disabledTag}>Unavailable</span>
+                          )}
+                        </td>
 
-                        {r.status === "Dispatched" && (
-                          <span className={styles.disabledTag}>Already Dispatched</span>
-                        )}
-                        {r.status === "Unavailable" && (
-                          <span className={styles.disabledTag}>Unavailable</span>
-                        )}
-                      </td>
-
-                      <td>{r.name}</td>
-                      <td>{r.email}</td>
-                      <td>{r.contact || "—"}</td>
-                    </tr>
-                  ))}
+                        <td>{r.name}</td>
+                        <td>{r.email}</td>
+                        <td>{r.contact || "—"}</td>
+                      </tr>
+                    ))}
                 </tbody>
               </table>
             </div>
@@ -258,7 +250,6 @@ const AlertDispatchModal = () => {
                 Dispatch Selected
               </button>
 
-              {/* FIX: Close modal and reset to Step 1 */}
               <button
                 className={styles.closeBtn}
                 onClick={() => {
@@ -270,17 +261,6 @@ const AlertDispatchModal = () => {
               </button>
             </div>
           </>
-        )}
-
-        {/* SUCCESS MESSAGE */}
-        {showSuccess && (
-          <div className={styles.successModal}>
-            <div className={styles.successIcon}>✔</div>
-            <h3 className={styles.successTitle}>Dispatch Successful!</h3>
-            <p className={styles.successMessage}>
-              Responders have been dispatched successfully.
-            </p>
-          </div>
         )}
       </div>
     </div>

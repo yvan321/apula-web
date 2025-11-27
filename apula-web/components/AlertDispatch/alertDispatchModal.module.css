@@ -67,12 +67,10 @@
   gap: 6px;
 }
 
-.successMessage {
-  text-align: center;
-  font-size: 20px;
-  color: green;
-  margin-top: 20px;
-}
+
+
+
+/* Removed: successOverlay, successBox, successIcon, successTitle, successMessage */
 
 @keyframes fadeIn {
   from { opacity: 0; transform: scale(0.97); }

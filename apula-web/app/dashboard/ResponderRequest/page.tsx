@@ -15,6 +15,8 @@ import {
 
 import { FaUserCheck, FaUserTimes, FaSearch } from "react-icons/fa";
 import styles from "./responderRequest.module.css";
+import AlertBellButton from "@/components/AlertDispatch/AlertBellButton";
+import AlertDispatchModal from "@/components/AlertDispatch/AlertDispatchModal";
 
 const ResponderRequestsPage = () => {
   const [responders, setResponders] = useState([]);
@@ -98,6 +100,15 @@ const ResponderRequestsPage = () => {
   return (
     <div>
       <AdminHeader />
+
+      
+            {/* 🔔 Bell Icon at top-right */}
+            <div style={{ position: "absolute", top: 20, right: 30, zIndex: 50 }}>
+              <AlertBellButton />
+            </div>
+      
+            {/* 🚨 Alert Dispatch Modal (opens when bell is clicked) */}
+            <AlertDispatchModal />
 
       <div className={styles.container}>
         <div className={styles.contentSection}>

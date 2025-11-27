@@ -10,7 +10,6 @@ import {
   UserCheck,
   Bell,
   FileText,
-  BarChart,
   Settings,
   LogOut,
   Send,
@@ -18,8 +17,8 @@ import {
 
 import { auth, db } from "@/lib/firebase";
 import { onAuthStateChanged, signOut } from "firebase/auth";
-import { 
-  doc, 
+import {
+  doc,
   getDoc,
   collection,
   query,
@@ -31,8 +30,14 @@ export default function AdminHeader() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [userName, setUserName] = useState<string>("Loading...");
   const [initial, setInitial] = useState<string>("?");
-  const [role, setRole] = useState<string>("admin"); // default role
+  const [role, setRole] = useState<string>("admin");
   const pathname = usePathname();
+
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  // 🔊 SOUND STATES
+  const [audio, setAudio] = useState<HTMLAudioElement | null>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
 
   const toggleSidebar = () => setSidebarOpen((prev) => !prev);
   const isActive = (path: string) => pathname === path;
@@ -42,9 +47,14 @@ export default function AdminHeader() {
     window.location.href = "/login";
   };
 
-  const [unreadCount, setUnreadCount] = useState(0);
+  // 🔊 INITIALIZE LOOPING SOUND (GLOBAL)
+  useEffect(() => {
+    const audioElement = new Audio("/sounds/fire_alarm.mp3");
+    audioElement.loop = true; // keep looping
+    setAudio(audioElement);
+  }, []);
 
-  // 🔔 Realtime unread notifications
+  // 🔥 Realtime unread count (GLOBAL)
   useEffect(() => {
     const q = query(collection(db, "alerts"), where("read", "==", false));
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -53,7 +63,23 @@ export default function AdminHeader() {
     return () => unsubscribe();
   }, []);
 
-  // 👤 Load user + role
+  // 🔊 Play or stop sound based on unreadCount (GLOBAL)
+  useEffect(() => {
+    if (!audio) return;
+
+    if (unreadCount > 0 && !isPlaying) {
+      audio.play().catch(() => {});
+      setIsPlaying(true);
+    }
+
+    if (unreadCount === 0 && isPlaying) {
+      audio.pause();
+      audio.currentTime = 0;
+      setIsPlaying(false);
+    }
+  }, [unreadCount, audio]);
+
+  // 👤 Load user name/role
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (!user) {
@@ -70,7 +96,7 @@ export default function AdminHeader() {
 
           setUserName(name);
           setInitial(name.charAt(0).toUpperCase());
-          setRole(data.role || "admin"); // ← get role from Firestore
+          setRole(data.role || "admin");
         } else {
           const display = user.displayName || "User";
           setUserName(display);
@@ -98,8 +124,6 @@ export default function AdminHeader() {
         </div>
 
         <nav className={styles.sidebarNav}>
-
-          {/* Dashboard */}
           <a
             href="/dashboard"
             className={`${styles.sidebarLink} ${isActive("/dashboard") ? styles.activeLink : ""}`}
@@ -108,7 +132,7 @@ export default function AdminHeader() {
             <span>Dashboard</span>
           </a>
 
-          {/* Notifications with badge */}
+          {/* Notifications with real-time badge */}
           <a
             href="/dashboard/notifications"
             className={`${styles.sidebarLink} ${
@@ -118,11 +142,13 @@ export default function AdminHeader() {
             <div className={styles.notifWrapper}>
               <Bell size={18} className={styles.icon} />
               <span>Notifications</span>
-              {unreadCount > 0 && <span className={styles.badge}>{unreadCount}</span>}
+              {unreadCount > 0 && (
+                <span className={styles.badge}>{unreadCount}</span>
+              )}
             </div>
           </a>
 
-          {/* SUPER ADMIN ONLY → Users */}
+          {/* SUPER ADMIN ONLY */}
           {role === "superadmin" && (
             <a
               href="/dashboard/users"
@@ -133,7 +159,6 @@ export default function AdminHeader() {
             </a>
           )}
 
-          {/* Responders */}
           <a
             href="/dashboard/ResponderRequest"
             className={`${styles.sidebarLink} ${
@@ -144,7 +169,6 @@ export default function AdminHeader() {
             <span>Responders</span>
           </a>
 
-          {/* Dispatch */}
           <a
             href="/dashboard/dispatch"
             className={`${styles.sidebarLink} ${
@@ -155,7 +179,6 @@ export default function AdminHeader() {
             <span>Dispatch</span>
           </a>
 
-          {/* Reports */}
           <a
             href="/dashboard/reports"
             className={`${styles.sidebarLink} ${
@@ -166,7 +189,6 @@ export default function AdminHeader() {
             <span>Reports</span>
           </a>
 
-          {/* Settings */}
           <a
             href="/dashboard/settings"
             className={`${styles.sidebarLink} ${

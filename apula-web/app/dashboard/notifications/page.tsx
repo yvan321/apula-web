@@ -21,9 +21,21 @@ const NotificationPage: React.FC = () => {
   const [showModal, setShowModal] = useState(false);
   const [filter, setFilter] = useState("all");
 
+  // 🔊 SOUND ALERT STATES
+  const [audio, setAudio] = useState<HTMLAudioElement | null>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+
+  // 🎵 Initialize sound alert (looping)
+  useEffect(() => {
+    const audioElement = new Audio("/sounds/fire_alarm.mp3"); // make sure file is in public/sounds/
+    audioElement.loop = true;
+    setAudio(audioElement);
+  }, []);
+
   // 🔥 Real-time listener for alerts/notifications
   useEffect(() => {
     const q = query(collection(db, "alerts"), orderBy("timestamp", "desc"));
+
     const unsubscribe = onSnapshot(
       q,
       (snapshot) => {
@@ -32,10 +44,29 @@ const NotificationPage: React.FC = () => {
       },
       (err) => console.error("alerts onSnapshot error:", err)
     );
+
     return () => unsubscribe();
   }, []);
 
-  // 📨 Open modal (and auto mark as read)
+  // 🔊 SOUND LOGIC — Play when unread exists, stop when all read
+  useEffect(() => {
+    if (!audio) return;
+
+    const hasUnread = notifications.some((n) => !n.read);
+
+    if (hasUnread && !isPlaying) {
+      audio.play().catch(() => {});
+      setIsPlaying(true);
+    }
+
+    if (!hasUnread && isPlaying) {
+      audio.pause();
+      audio.currentTime = 0;
+      setIsPlaying(false);
+    }
+  }, [notifications, audio]);
+
+  // 📨 Open modal (and mark as read)
   const handleOpenModal = async (notif: any) => {
     setSelectedNotif(notif);
     setShowModal(true);
@@ -60,13 +91,13 @@ const NotificationPage: React.FC = () => {
     <div>
       <AdminHeader />
 
-      {/* 🔔 Bell Icon at top-right */}
+      {/* 🔔 Bell Icon */}
       <div style={{ position: "absolute", top: 20, right: 30, zIndex: 50 }}>
         <AlertBellButton />
       </div>
 
-      {/* 🚨 Alert Dispatch Modal (opens when bell is clicked) */}
       <AlertDispatchModal />
+
       <div className={styles.container}>
         <div className={styles.contentSection}>
           <div className={styles.headerRow}>
@@ -147,10 +178,7 @@ const NotificationPage: React.FC = () => {
 
       {/* 🔥 Alert Modal — View Only */}
       {showModal && selectedNotif && (
-        <div
-          className={styles.modalOverlay}
-          onClick={handleCloseModal}
-        >
+        <div className={styles.modalOverlay} onClick={handleCloseModal}>
           <div
             className={styles.modalContent}
             onClick={(e) => e.stopPropagation()}
@@ -166,9 +194,7 @@ const NotificationPage: React.FC = () => {
             <p>
               <strong>Date:</strong>{" "}
               {selectedNotif.timestamp?.seconds
-                ? new Date(
-                    selectedNotif.timestamp.seconds * 1000
-                  ).toLocaleString()
+                ? new Date(selectedNotif.timestamp.seconds * 1000).toLocaleString()
                 : "Pending..."}
             </p>
 

@@ -257,7 +257,7 @@ setTimeout(() => setShowSuccessModal(false), 2500);
           <table className={styles.userTable}>
             <thead>
               <tr>
-                <th>ID</th>
+                
                 <th>Name</th>
                 <th>Email</th>
                 <th>Address</th>
@@ -271,7 +271,7 @@ setTimeout(() => setShowSuccessModal(false), 2500);
     .filter((r) => r.status !== "Unavailable")
     .map((r) => (
                 <tr key={r.id}>
-                  <td>{r.id.slice(0, 6)}…</td>
+                 
                   <td>{r.name}</td>
                   <td>{r.email}</td>
                   <td>{r.address}</td>

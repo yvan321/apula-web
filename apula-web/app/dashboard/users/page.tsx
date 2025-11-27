@@ -6,8 +6,10 @@ import AlertBellButton from "@/components/AlertDispatch/AlertBellButton";
 import AlertDispatchModal from "@/components/AlertDispatch/AlertDispatchModal";
 import styles from "./userpagestyles.module.css";
 import { FaUsers, FaUserShield, FaUserTie, FaUser, FaSearch } from "react-icons/fa";
-import { collection, getDocs } from "firebase/firestore";
+import { collection, getDocs, doc, updateDoc } from "firebase/firestore"; // <-- UPDATED
 import { db } from "@/lib/firebase";
+
+
 
 type User = {
   id: string;
@@ -17,17 +19,20 @@ type User = {
   contact?: string;
   address?: string;
   email?: string;
-  // createdAt might be a Firestore Timestamp or a plain string
+  status?: string;
   createdAt?: any;
-  created_time?: string; // in case you used that key previously
+  created_time?: string;
 };
 
 export default function UsersPage() {
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedRole, setSelectedRole] = useState("All"); // keep original "All" label
+  const [selectedRole, setSelectedRole] = useState("All");
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [editTarget, setEditTarget] = useState<User | null>(null);
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showSuccess, setShowSuccess] = useState(false);
+
 
   useEffect(() => {
     const fetchUsers = async () => {
@@ -45,28 +50,26 @@ export default function UsersPage() {
     fetchUsers();
   }, []);
 
-  // normalize role for comparisons (handles "admin" & "Admin")
-  const norm = (r?: string) => (r ? r.toString().toLowerCase() : "");
+  const norm = (r?: string) => (r ? r.toLowerCase() : "");
 
-  // counts for cards (case-insensitive)
   const totalAll = users.length;
   const totalAdmins = users.filter((u) => norm(u.role) === "admin").length;
   const totalResponders = users.filter((u) => norm(u.role) === "responder").length;
   const totalUsers = users.filter((u) => norm(u.role) === "user").length;
 
-  // filter logic: preserve original behavior (selectedRole uses capitalized labels)
   const roleMatches = (user: User) => {
     if (selectedRole === "All") return true;
     return norm(user.role) === selectedRole.toLowerCase();
   };
 
   const matchesSearch = (user: User) => {
-    const q = searchTerm.trim().toLowerCase();
+    const q = searchTerm.toLowerCase();
     if (!q) return true;
+
     return (
       (user.name || "").toLowerCase().includes(q) ||
       (user.role || "").toLowerCase().includes(q) ||
-      (user.contact || "").toLowerCase().includes(q)||
+      (user.contact || "").toLowerCase().includes(q) ||
       (user.email || "").toLowerCase().includes(q)
     );
   };
@@ -76,19 +79,19 @@ export default function UsersPage() {
   const openModal = (user: User) => setSelectedUser(user);
   const closeModal = () => setSelectedUser(null);
 
-  // Format Firestore Timestamp -> readable string
   const formatCreatedAt = (createdAt: any, created_time?: string) => {
     if (!createdAt && created_time) return created_time;
     if (!createdAt) return "N/A";
-    // Firestore Timestamp has seconds/nanoseconds
+
     if (createdAt.seconds) {
       return new Date(createdAt.seconds * 1000).toLocaleString();
     }
-    // if it's already a Date or string
+
     try {
       const d = new Date(createdAt);
       if (!isNaN(d.getTime())) return d.toLocaleString();
     } catch {}
+
     return String(createdAt);
   };
 
@@ -96,17 +99,15 @@ export default function UsersPage() {
     <div>
       <AdminHeader />
 
-        {/* 🔔 Bell Icon at top-right */}
+      {/* Notification Bell */}
       <div style={{ position: "absolute", top: 20, right: 30, zIndex: 50 }}>
         <AlertBellButton />
       </div>
 
-      {/* 🚨 Alert Dispatch Modal (opens when bell is clicked) */}
       <AlertDispatchModal />
 
       <div className={styles.container}>
         <div data-aos="fade-up" className={styles.contentSection}>
-          {/* Header */}
           <div className={styles.headerRow}>
             <h2 className={styles.pageTitle}>Users</h2>
           </div>
@@ -167,7 +168,7 @@ export default function UsersPage() {
             </div>
           </div>
 
-          {/* Table Section */}
+          {/* Table */}
           <div className={styles.tableSection}>
             <div className={styles.filters}>
               <div className={styles.searchWrapper}>
@@ -188,37 +189,50 @@ export default function UsersPage() {
                   <th>ID</th>
                   <th>Name</th>
                   <th>Role</th>
-                  <th>Contact</th>   {/* ← changed */}
+                  <th>Contact</th>
+                 
                   <th>Actions</th>
                 </tr>
               </thead>
+
               <tbody>
                 {loading ? (
                   <tr>
-                    <td colSpan={5} className={styles.noResults}>
-                      Loading...
-                    </td>
+                    <td colSpan={6} className={styles.noResults}>Loading...</td>
                   </tr>
                 ) : filteredUsers.length > 0 ? (
                   filteredUsers.map((user) => (
                     <tr key={user.id}>
-                      <td data-label="ID">{user.id}</td>
-                      <td data-label="Name">{user.name ?? "N/A"}</td>
-                      <td data-label="Role">{user.role ?? "N/A"}</td>
-                      <td data-label="Contact">{user.contact ?? "N/A"}</td> {/* ← changed */}
-                      <td data-label="Actions">
-                        <button className={styles.viewBtn} onClick={() => openModal(user)}>
+                      <td>{user.id}</td>
+                      <td>{user.name ?? "N/A"}</td>
+                      <td>{user.role ?? "N/A"}</td>
+                      <td>{user.contact ?? "N/A"}</td>
+                   
+
+                      <td>
+                        {/* Always show View */}
+                        <button
+                          className={styles.viewBtn}
+                          onClick={() => openModal(user)}
+                        >
                           View
                         </button>
-                        <button className={styles.editBtn}>Edit</button>
+
+                        {/* Show Edit ONLY for responders */}
+                        {user.role === "responder" && (
+                          <button
+                            className={styles.editBtn}
+                            onClick={() => setEditTarget(user)}
+                          >
+                            Edit
+                          </button>
+                        )}
                       </td>
                     </tr>
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={5} className={styles.noResults}>
-                      No users found.
-                    </td>
+                    <td colSpan={6} className={styles.noResults}>No users found.</td>
                   </tr>
                 )}
               </tbody>
@@ -227,15 +241,17 @@ export default function UsersPage() {
         </div>
       </div>
 
-      {/* Popup Modal */}
+      {/* VIEW MODAL */}
       {selectedUser && (
         <div className={styles.modalOverlay} onClick={closeModal}>
           <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
             <h3 className={styles.modalTitle}>User Information</h3>
+
             <div className={styles.modalDetails}>
               <p><strong>Name:</strong> {selectedUser.name ?? "N/A"}</p>
               <p><strong>Role:</strong> {selectedUser.role ?? "N/A"}</p>
               <p><strong>Contact:</strong> {selectedUser.contact ?? "N/A"}</p>
+              
               <p><strong>Address:</strong> {selectedUser.address ?? "N/A"}</p>
               <p><strong>Email:</strong> {selectedUser.email ?? "N/A"}</p>
               <p>
@@ -243,12 +259,94 @@ export default function UsersPage() {
                 {formatCreatedAt(selectedUser.createdAt, selectedUser.created_time)}
               </p>
             </div>
+
             <button className={styles.closeBtn} onClick={closeModal}>
               Close
             </button>
           </div>
         </div>
       )}
+
+      {/* EDIT MODAL (Responder Only) */}
+      {editTarget && (
+        <div className={styles.modalOverlay} onClick={() => setEditTarget(null)}>
+          <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
+            <h3 className={styles.modalTitle}>Edit Responder Status</h3>
+
+            <div className={styles.modalDetails}>
+              <p><strong>Name:</strong> {editTarget.name}</p>
+              <p><strong>Role:</strong> {editTarget.role}</p>
+
+              <label><strong>Status:</strong></label>
+              <select
+                value={editTarget.status ?? "Available"}
+                onChange={(e) =>
+                  setEditTarget((prev) => prev && { ...prev, status: e.target.value })
+                }
+                className={styles.inputField}
+              >
+                <option value="Available">Available</option>
+                <option value="Unavailable">Unavailable</option>
+              
+              </select>
+
+              <p><strong>Email:</strong> {editTarget.email}</p>
+              <p><strong>Contact:</strong> {editTarget.contact}</p>
+            </div>
+
+        <button
+  className={styles.saveBtn}
+  onClick={async () => {
+    if (!editTarget) return;
+
+    try {
+      // Update Firestore
+      await updateDoc(doc(db, "users", editTarget.id), {
+        status: editTarget.status,
+      });
+
+      // Update UI
+      setUsers((prev) =>
+        prev.map((u) =>
+          u.id === editTarget.id ? { ...u, status: editTarget.status } : u
+        )
+      );
+
+      // Show success modal
+      setShowSuccess(true);
+
+      // Auto-close success after 2 seconds
+      setTimeout(() => setShowSuccess(false), 2000);
+    } catch (err) {
+      console.error("Error updating status:", err);
+      alert("Failed to update status.");
+    }
+
+    setEditTarget(null);
+  }}
+>
+  Save
+</button>
+
+
+
+
+            <button className={styles.closeBtn} onClick={() => setEditTarget(null)}>
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
+      {showSuccess && (
+  <div className={styles.successOverlay}>
+    <div className={styles.successModal}>
+      <h3>Status Updated!</h3>
+      <p>The responder’s status has been successfully saved.</p>
+    </div>
+  </div>
+)}
+
     </div>
   );
 }
