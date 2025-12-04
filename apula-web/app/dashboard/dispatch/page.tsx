@@ -10,10 +10,8 @@ import {
   query,
   where,
   orderBy,
-  limit,
   getDocs,
   doc,
-  updateDoc,
   onSnapshot,
   serverTimestamp,
   writeBatch,
@@ -23,29 +21,28 @@ import AlertBellButton from "@/components/AlertDispatch/AlertBellButton";
 import AlertDispatchModal from "@/components/AlertDispatch/AlertDispatchModal";
 
 const DispatchPage: React.FC = () => {
+  // UI states
   const [searchTerm, setSearchTerm] = useState("");
   const [responders, setResponders] = useState<any[]>([]);
   const [alerts, setAlerts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const [selectedAlert, setSelectedAlert] = useState<any>(null);
+  // dispatch flow states
+  const [pendingDispatchIds, setPendingDispatchIds] = useState<Set<string> | null>(null); // used when user clicks Dispatch Team (holds available ids)
+  const [selectedAlert, setSelectedAlert] = useState<any>(null); // chosen alert to dispatch against
   const [showResponderModal, setShowResponderModal] = useState(false);
-
   const [selectedResponderIds, setSelectedResponderIds] = useState<Set<string>>(new Set());
-  const [selectAll, setSelectAll] = useState(false);
 
-  const [selectedResponderView, setSelectedResponderView] = useState<any>(null);
-  const [dispatchInfo, setDispatchInfo] = useState<any>(null);
-const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
 
-  // ------------------------------------------------------------
-  // REAL-TIME RESPONDERS
-  // ------------------------------------------------------------
+  // ---------------------------
+  // Real-time responders fetch
+  // ---------------------------
   useEffect(() => {
     const unsub = onSnapshot(
       query(collection(db, "users"), where("role", "==", "responder")),
       (snap) => {
-        setResponders(snap.docs.map((doc) => ({ id: doc.id, ...doc.data() })));
+        setResponders(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
         setLoading(false);
       }
     );
@@ -53,59 +50,80 @@ const [showSuccessModal, setShowSuccessModal] = useState(false);
     return () => unsub();
   }, []);
 
-  // ------------------------------------------------------------
-  // SEARCH FILTER
-  // ------------------------------------------------------------
+  // ---------------------------
+  // Filtering (search by team or vehicle or status)
+  // ---------------------------
   const filteredResponders = responders.filter((r) => {
-    const term = searchTerm.toLowerCase();
+    const term = searchTerm.trim().toLowerCase();
+    if (!term) return true;
     return (
-      r.name?.toLowerCase().includes(term) ||
-      r.email?.toLowerCase().includes(term) ||
-      r.address?.toLowerCase().includes(term)
+      (r.team?.toLowerCase() || "").includes(term) ||
+      (r.vehicle?.toLowerCase() || "").includes(term) ||
+      (r.status?.toLowerCase() || "").includes(term)
     );
   });
 
-  // ------------------------------------------------------------
-  // FETCH ALERTS (Pending Only)
-  // ------------------------------------------------------------
+  // ---------------------------
+  // Group responders by team + vehicle
+  // ---------------------------
+  const teamVehicleGroups: Record<string, any> = {};
+  filteredResponders.forEach((r) => {
+    const team = r.team || "Unassigned";
+    const vehicle = r.vehicle || "Unassigned";
+    const key = `${team}___${vehicle}`;
+    if (!teamVehicleGroups[key]) {
+      teamVehicleGroups[key] = { team, vehicle, responders: [] as any[] };
+    }
+    teamVehicleGroups[key].responders.push(r);
+  });
+
+  // Determine group status using your requested rules:
+  // - Available: at least one responder Available
+  // - Dispatched: every responder is Dispatched
+  // - Unavailable: otherwise (no Available, not all Dispatched)
+  const groupedList = Object.values(teamVehicleGroups).map((group: any) => {
+    const statuses = group.responders.map((r: any) => r.status);
+    let groupStatus = "Unavailable";
+    if (statuses.some((s: string) => s === "Available")) groupStatus = "Available";
+    if (statuses.length > 0 && statuses.every((s: string) => s === "Dispatched")) groupStatus = "Dispatched";
+    return { ...group, status: groupStatus };
+  });
+
+  // ---------------------------
+  // Open alert modal (fetch pending alerts)
+  // ---------------------------
   const openAlertModal = async () => {
     const snap = await getDocs(
-      query(
-        collection(db, "alerts"),
-        where("status", "==", "Pending"),
-        orderBy("timestamp", "desc")
-      )
+      query(collection(db, "alerts"), where("status", "==", "Pending"), orderBy("timestamp", "desc"))
     );
-
     const pending = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-
     if (pending.length === 0) {
       window.alert("No pending alerts found.");
       return;
     }
-
     setAlerts(pending);
   };
 
-  const handleDispatchClick = () => {
-    openAlertModal();
-    setSelectedAlert(null);
-    setShowResponderModal(false);
-  };
-
-  // ------------------------------------------------------------
-  // SELECT ALERT → PROCEED TO RESPONDER SELECTION
-  // ------------------------------------------------------------
+  // When alert is selected from alerts list modal
   const selectAlertForDispatch = (alert: any) => {
     setSelectedAlert(alert);
-    setSelectedResponderIds(new Set());
-    setSelectAll(false);
+    // move pendingDispatchIds to selectedResponderIds (preselect)
+    if (pendingDispatchIds) {
+      setSelectedResponderIds(new Set(pendingDispatchIds));
+      setPendingDispatchIds(null);
+    } else {
+      // fallback: no pending ids (shouldn't happen), open responder modal empty
+      setSelectedResponderIds(new Set());
+    }
+    // open responder confirmation modal
     setShowResponderModal(true);
+    // hide alert list
+    setAlerts([]);
   };
 
-  // ------------------------------------------------------------
-  // MULTI SELECT RESPONDERS
-  // ------------------------------------------------------------
+  // ---------------------------
+  // Toggle selection inside responder confirmation modal
+  // ---------------------------
   const toggleResponder = (id: string) => {
     setSelectedResponderIds((prev) => {
       const next = new Set(prev);
@@ -114,41 +132,33 @@ const [showSuccessModal, setShowSuccessModal] = useState(false);
     });
   };
 
-const toggleSelectAll = () => {
-  if (!selectAll) {
-    const availableIds = responders
-      .filter((r) => r.status === "Available")
-      .map((r) => r.id);
-
-    setSelectedResponderIds(new Set(availableIds));
-    setSelectAll(true);
-  } else {
-    setSelectedResponderIds(new Set());
-    setSelectAll(false);
-  }
-};
-
-
-
-  // ------------------------------------------------------------
-  // DISPATCH SELECTED RESPONDERS
-  // ------------------------------------------------------------
+  // ---------------------------
+  // Dispatch selected responders (Option A: only dispatch those with status === "Available")
+  // ---------------------------
   const dispatchResponders = async () => {
-    if (!selectedAlert) return;
-
+    if (!selectedAlert) {
+      window.alert("Please select an alert first.");
+      return;
+    }
     if (selectedResponderIds.size === 0) {
-      window.alert("Please select at least one responder.");
+      window.alert("Please select at least one responder to dispatch.");
+      return;
+    }
+
+    // Filter selected responders to only those that are still Available
+    const respondersList = responders.filter(
+      (r) => selectedResponderIds.has(r.id) && r.status === "Available"
+    );
+
+    if (respondersList.length === 0) {
+      window.alert("No available responders selected to dispatch.");
       return;
     }
 
     try {
       const batch = writeBatch(db);
 
-      const respondersList = responders.filter((r) =>
-        selectedResponderIds.has(r.id)
-      );
-
-      const responderEmails = respondersList.map((r) => r.email.toLowerCase());
+      const responderEmails = respondersList.map((r) => (r.email || "").toLowerCase());
 
       const dispatchRef = doc(collection(db, "dispatches"));
 
@@ -156,89 +166,94 @@ const toggleSelectAll = () => {
         alertId: selectedAlert.id,
         alertType: selectedAlert.type,
         alertLocation: selectedAlert.location,
-
         responders: respondersList.map((r) => ({
           id: r.id,
           name: r.name,
-          email: r.email.toLowerCase(),
+          email: (r.email || "").toLowerCase(),
           contact: r.contact || "",
+          team: r.team || "Unassigned",
+          vehicle: r.vehicle || "Unassigned",
         })),
-
         responderEmails,
         userReported: selectedAlert.userName,
         userAddress: selectedAlert.userAddress,
         userContact: selectedAlert.userContact,
         userEmail: selectedAlert.userEmail,
-
         status: "Dispatched",
         timestamp: serverTimestamp(),
         dispatchedBy: "Admin Panel",
       });
 
-      // Update responders → Dispatched
-      respondersList.forEach((r) =>
-        batch.update(doc(db, "users", r.id), { status: "Dispatched" })
-      );
+      // Update each responder doc: set status = "Dispatched"
+      respondersList.forEach((r) => {
+        batch.update(doc(db, "users", r.id), { status: "Dispatched" });
+      });
 
-      // Update alert → Dispatched
+      // Update alert status to Dispatched
       batch.update(doc(db, "alerts", selectedAlert.id), { status: "Dispatched" });
 
-    await batch.commit();
+      await batch.commit();
 
-// Show success modal instead of alert
-setShowSuccessModal(true);
+      // success UI
+      setShowResponderModal(false);
+      setSelectedResponderIds(new Set());
+      setSelectedAlert(null);
+      setShowSuccessModal(true);
 
-setShowResponderModal(false);
-setAlerts([]);
-
-// OPTIONAL: auto-close after 2.5 seconds
-setTimeout(() => setShowSuccessModal(false), 2500);
-
+      // auto-close success
+      setTimeout(() => setShowSuccessModal(false), 2500);
     } catch (err) {
-      console.error(err);
+      console.error("Dispatch error:", err);
       window.alert("Error dispatching responders.");
     }
   };
 
-  // ------------------------------------------------------------
-  // VIEW DISPATCH INFO (for dispatched responders)
-  // ------------------------------------------------------------
-  const openViewModal = async (responder: any) => {
-    setSelectedResponderView(responder);
-    setDispatchInfo(null);
-
-    const snap = await getDocs(
-      query(
-        collection(db, "dispatches"),
-        where("responderEmails", "array-contains", responder.email.toLowerCase()),
-        orderBy("timestamp", "desc"),
-        limit(1)
-      )
-    );
-
-    if (!snap.empty) setDispatchInfo(snap.docs[0].data());
+  // ---------------------------
+  // Handler when clicking Dispatch Team in main table
+  // - collect available responders in the group
+  // - if none available show alert
+  // - else store available ids in pendingDispatchIds and open alert list
+  // ---------------------------
+  const handleDispatchTeam = (group: any) => {
+    const availableIds = group.responders.filter((r: any) => r.status === "Available").map((r: any) => r.id);
+    if (availableIds.length === 0) {
+      window.alert("No available responders in this team/vehicle to dispatch.");
+      return;
+    }
+    setPendingDispatchIds(new Set(availableIds));
+    openAlertModal();
   };
 
-  const closeView = () => {
-    setSelectedResponderView(null);
-    setDispatchInfo(null);
+  // ---------------------------
+  // Utility: open view modal for a responder (if you still want)
+  // ---------------------------
+  const openViewModal = async (responder: any) => {
+    // find the latest dispatch that contains this responder email
+    const snap = await getDocs(
+      query(collection(db, "dispatches"), where("responderEmails", "array-contains", (responder.email || "").toLowerCase()), orderBy("timestamp", "desc"), limit(1))
+    );
+    if (!snap.empty) {
+      setDispatchInfo(snap.docs[0].data());
+    } else {
+      setDispatchInfo(null);
+    }
+    setSelectedResponderIds(new Set([responder.id]));
+    setShowResponderModal(true);
   };
 
   return (
     <div className={styles.pageWrapper}>
       <AdminHeader />
 
-      {/* 🔔 Bell Icon at top-right */}
-      <div style={{ position: "absolute", top: 20, right: 30, zIndex: 50 }}>
+      <div style={{ position: "absolute", top: 20, right: 30 }}>
         <AlertBellButton />
       </div>
 
-      {/* 🚨 Alert Dispatch Modal (opens when bell is clicked) */}
       <AlertDispatchModal />
 
       <div className={styles.container}>
         <div className={styles.contentSection}>
-          <h2 className={styles.pageTitle}>Responder Dispatch</h2>
+          <h2 className={styles.pageTitle}>Team & Vehicle Dispatch</h2>
           <hr className={styles.separator} />
 
           {/* SEARCH */}
@@ -247,66 +262,56 @@ setTimeout(() => setShowSuccessModal(false), 2500);
             <input
               className={styles.searchInput}
               type="text"
-              placeholder="Search responder…"
+              placeholder="Search team or vehicle..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
 
-          {/* RESPONDER TABLE */}
+          {/* GROUP TABLE */}
           <table className={styles.userTable}>
             <thead>
               <tr>
-                
-                <th>Name</th>
-                <th>Email</th>
-                <th>Address</th>
+                <th>Team</th>
+                <th>Vehicle</th>
+                <th>Assigned</th>
                 <th>Status</th>
                 <th>Action</th>
               </tr>
             </thead>
 
             <tbody>
-              {filteredResponders
-    .filter((r) => r.status !== "Unavailable")
-    .map((r) => (
-                <tr key={r.id}>
-                 
-                  <td>{r.name}</td>
-                  <td>{r.email}</td>
-                  <td>{r.address}</td>
+              {groupedList.length === 0 && (
+                <tr>
+                  <td colSpan={5} style={{ textAlign: "center", padding: 20 }}>
+                    No groups found.
+                  </td>
+                </tr>
+              )}
+
+              {groupedList.map((group: any, idx: number) => (
+                <tr key={idx}>
+                  <td>{group.team}</td>
+                  <td>{group.vehicle}</td>
+                  <td>{group.responders.length}</td>
                   <td>
                     <span
-  className={
-    r.status === "Available"
-      ? styles.statusAvailable
-      : r.status === "Unavailable"
-      ? styles.statusUnavailable
-      : styles.statusDispatched
-  }
->
-  {r.status}
-</span>
+                      className={
+                        group.status === "Available"
+                          ? styles.statusAvailable
+                          : group.status === "Dispatched"
+                          ? styles.statusDispatched
+                          : styles.statusUnavailable
+                      }
+                    >
+                      {group.status}
+                    </span>
                   </td>
-
-                 <td>
-  {r.status === "Available" && (
-    <button className={styles.dispatchBtn} onClick={handleDispatchClick}>
-      <FaTruck /> Dispatch
-    </button>
-  )}
-
-  {r.status === "Dispatched" && (
-    <button className={styles.viewBtn} onClick={() => openViewModal(r)}>
-      <FaEye /> View
-    </button>
-  )}
-
-  {r.status === "Unavailable" && (
-    <span style={{ color: "#888", fontStyle: "italic" }}>No Action</span>
-  )}
-</td>
-
+                  <td>
+                    <button className={styles.dispatchBtn} onClick={() => handleDispatchTeam(group)}>
+                      <FaTruck /> Dispatch Team
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -314,95 +319,57 @@ setTimeout(() => setShowSuccessModal(false), 2500);
         </div>
       </div>
 
-      {/* VIEW DISPATCH MODAL */}
-      {selectedResponderView && dispatchInfo && (
-        <div className={styles.modalOverlay} onClick={closeView}>
-          <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
-            <h3 className={styles.modalTitle}>Responder Dispatch Info</h3>
+      {/* ALERT SELECTION MODAL */}
+      {alerts.length > 0 && !showResponderModal && selectedAlert === null && (
+        <div className={styles.modalOverlay} onClick={() => setAlerts([])}>
+          <div className={styles.modalWide} onClick={(e) => e.stopPropagation()}>
+            <h3 className={styles.modalTitle}>Select Alert</h3>
 
-            <p><strong>Name:</strong> {selectedResponderView.name}</p>
-            <p><strong>Email:</strong> {selectedResponderView.email}</p>
-            <p><strong>Contact:</strong> {selectedResponderView.contact}</p>
+            <div className={styles.tableScroll}>
+              <table className={styles.alertTable}>
+                <thead>
+                  <tr>
+                    <th>Reporter</th>
+                    <th>Contact</th>
+                    <th>Address</th>
+                    <th>Select</th>
+                  </tr>
+                </thead>
 
-            <hr />
+                <tbody>
+                  {alerts.map((a) => (
+                    <tr key={a.id}>
+                      <td>{a.userName}</td>
+                      <td>{a.userContact}</td>
+                      <td>{a.userAddress}</td>
+                      <td>
+                        <button className={styles.assignBtn} onClick={() => selectAlertForDispatch(a)}>
+                          Select
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
 
-            <h4>🚨 Latest Dispatch</h4>
-
-            <p><strong>Alert:</strong> {dispatchInfo.alertType}</p>
-            <p><strong>Location:</strong> {dispatchInfo.alertLocation}</p>
-            <p><strong>Reporter:</strong> {dispatchInfo.userReported}</p>
-            <p><strong>Reporter Contact:</strong> {dispatchInfo.userContact}</p>
-            <p><strong>Reporter Address:</strong> {dispatchInfo.userAddress}</p>
-            <p><strong>Reporter Email:</strong> {dispatchInfo.userEmail}</p>
-
-            <p>
-              <strong>Timestamp:</strong>{" "}
-              {dispatchInfo.timestamp?.seconds
-                ? new Date(dispatchInfo.timestamp.seconds * 1000).toLocaleString()
-                : "N/A"}
-            </p>
-
-            <button className={styles.closeBtn} onClick={closeView}>Close</button>
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
+              <button className={styles.closeBtn} onClick={() => setAlerts([])}>Close</button>
+            </div>
           </div>
         </div>
       )}
 
-      {/* ALERT SELECTION MODAL (TABLE VERSION) */}
-{alerts.length > 0 && !showResponderModal && selectedAlert === null && (
-  <div className={styles.modalOverlay} onClick={() => setAlerts([])}>
-    <div className={styles.modalWide} onClick={(e) => e.stopPropagation()}>
-      <h3 className={styles.modalTitle}>Select Alert</h3>
-
-      <div className={styles.tableScroll}>
-        <table className={styles.alertTable}>
-          <thead>
-            <tr>
-              <th>Reporter</th>
-              <th>Contact</th>
-              <th>Address</th>
-              <th>Select</th>
-            </tr>
-          </thead>
-
-          <tbody>
-            {alerts.map((alert) => (
-              <tr key={alert.id}>
-                <td>{alert.userName}</td>
-                <td>{alert.userContact}</td>
-                <td>{alert.userAddress}</td>
-
-                <td>
-                  <button
-                    className={styles.assignBtn}
-                    onClick={() => selectAlertForDispatch(alert)}
-                  >
-                    Select
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      <button className={styles.closeBtn} onClick={() => setAlerts([])}>
-        Close
-      </button>
-    </div>
-  </div>
-)}
-
-
-      {/* RESPONDER SELECTION MODAL (TABLE VERSION) */}
+      {/* RESPONDER CONFIRMATION MODAL */}
       {showResponderModal && (
         <div className={styles.modalOverlay} onClick={() => setShowResponderModal(false)}>
           <div className={styles.modalWide} onClick={(e) => e.stopPropagation()}>
-            <h3 className={styles.modalTitle}>Select Responders</h3>
+            <h3 className={styles.modalTitle}>Confirm Responders to Dispatch</h3>
 
-            <label className={styles.selectAllRow}>
-              <input type="checkbox" checked={selectAll} onChange={toggleSelectAll} />
-              <span>Select All Responders</span>
-            </label>
+            <p style={{ marginBottom: 8 }}>
+              <strong>Alert:</strong> {selectedAlert?.type || "Manual"}{" "}
+              <span style={{ marginLeft: 12 }}>{selectedAlert?.location || ""}</span>
+            </p>
 
             <div className={styles.tableScroll}>
               <table className={styles.responderTable}>
@@ -410,37 +377,52 @@ setTimeout(() => setShowSuccessModal(false), 2500);
                   <tr>
                     <th>Select</th>
                     <th>Name</th>
-                    <th>Email</th>
                     <th>Contact</th>
+                    <th>Team</th>
+                    <th>Vehicle</th>
+                    <th>Status</th>
                   </tr>
                 </thead>
 
                 <tbody>
-                  {responders.filter(r => r.status !== "Unavailable").map((r) => (
-                    <tr key={r.id}>
-                      <td>
-                       <input
-  type="checkbox"
-  disabled={r.status === "Unavailable" || r.status === "Dispatched"}
-  checked={selectedResponderIds.has(r.id)}
-  onChange={() => toggleResponder(r.id)}
-/>
-
-{r.status === "Dispatched" && (
-  <span className={styles.disabledTag}>Already Dispatched</span>
-)}
-
-{r.status === "Unavailable" && (
-  <span className={styles.disabledTag}>Unavailable</span>
-)}
-
-
+                  {Array.from(selectedResponderIds).length === 0 && (
+                    <tr>
+                      <td colSpan={6} style={{ textAlign: "center", padding: 20 }}>
+                        No responders preselected. You can select responders from the main list then retry.
                       </td>
-                      <td>{r.name}</td>
-                      <td>{r.email}</td>
-                      <td>{r.contact || "—"}</td>
                     </tr>
-                  ))}
+                  )}
+
+                  {responders
+                    .filter((r) => selectedResponderIds.has(r.id))
+                    .map((r) => (
+                      <tr key={r.id}>
+                        <td>
+                          <input
+                            type="checkbox"
+                            checked={selectedResponderIds.has(r.id)}
+                            onChange={() => toggleResponder(r.id)}
+                          />
+                        </td>
+                        <td>{r.name}</td>
+                        <td>{r.contact || "—"}</td>
+                        <td>{r.team || "Unassigned"}</td>
+                        <td>{r.vehicle || "Unassigned"}</td>
+                        <td>
+                          <span
+                            className={
+                              r.status === "Available"
+                                ? styles.statusAvailable
+                                : r.status === "Dispatched"
+                                ? styles.statusDispatched
+                                : styles.statusUnavailable
+                            }
+                          >
+                            {r.status}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
                 </tbody>
               </table>
             </div>
@@ -449,41 +431,21 @@ setTimeout(() => setShowSuccessModal(false), 2500);
               <button className={styles.assignBtn} onClick={dispatchResponders}>
                 Dispatch Selected
               </button>
-
-              <button className={styles.closeBtn} onClick={() => setShowResponderModal(false)}>
-                Close
-              </button>
+              <button className={styles.closeBtn} onClick={() => setShowResponderModal(false)}>Close</button>
             </div>
           </div>
         </div>
-
-        
       )}
 
-      {/* SUCCESS MODAL */}
-
-
-
-      {/* SUCCESS MODAL */}
-{showSuccessModal && (
-  <div className={styles.modalOverlay}>
-    <div className={styles.successModal}>
-      <div className={styles.successIcon}>✔</div>
-      <h3 className={styles.successTitle}>Dispatch Successful!</h3>
-      <p className={styles.successMessage}>
-        Responders have been dispatched successfully.
-      </p>
-
-      <button
-        className={styles.successCloseBtn}
-        onClick={() => setShowSuccessModal(false)}
-      >
-        Close
-      </button>
-    </div>
-  </div>
-)}
-
+      {/* SUCCESS */}
+      {showSuccessModal && (
+        <div className={styles.modalOverlay}>
+          <div className={styles.successModal}>
+            <div className={styles.successIcon}>✔</div>
+            <h3 className={styles.successTitle}>Dispatch Successful!</h3>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

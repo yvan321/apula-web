@@ -13,6 +13,7 @@ import {
   Settings,
   LogOut,
   Send,
+  ClipboardList,
 } from "lucide-react";
 
 import { auth, db } from "@/lib/firebase";
@@ -166,8 +167,19 @@ export default function AdminHeader() {
             }`}
           >
             <UserCheck size={18} className={styles.icon} />
-            <span>Responders</span>
+            <span>Request</span>
           </a>
+
+          <a
+  href="/dashboard/TeamnVechi"
+  className={`${styles.sidebarLink} ${
+    isActive("/dashboard/TeamnVechi") ? styles.activeLink : ""
+  }`}
+>
+  <ClipboardList size={18} className={styles.icon} />
+<span>Assign</span>
+
+</a>
 
           <a
             href="/dashboard/dispatch"
