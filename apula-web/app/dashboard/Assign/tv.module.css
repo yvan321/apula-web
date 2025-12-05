@@ -33,27 +33,64 @@
 
 /* SEARCH BAR */
 .searchWrapper {
-  position: relative;
-  width: 300px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 50%;
+  gap: 80px;
   margin-bottom: 15px;
+}
+
+
+
+/* SEARCH BOX */
+.searchBox {
+  position: relative;
+  flex: 1 1 auto;       /* Allow shrinking */
+  min-width: 0;         /* Prevent overflow */
 }
 
 .searchIcon {
   position: absolute;
   top: 50%;
-  left: 10px;
+  left: 12px;
   transform: translateY(-50%);
   color: #777;
 }
 
 .searchInput {
   width: 100%;
-  padding: 10px 10px 10px 35px;
+  height: 42px;
+  padding: 10px 10px 10px 38px;
   border: 1px solid #ccc;
   border-radius: 20px;
   outline: none;
   font-size: 0.95rem;
 }
+
+
+/* ASSIGN BUTTON */
+.assignBtn {
+  background: #c00;
+  color: white;
+  border: none;
+  padding: 10px 24px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  height: 42px;
+  flex-shrink: 0;          /* ❗ Prevent button from shrinking or breaking */
+  white-space: nowrap;     /* Keep text in one line */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+
+.assignBtn:hover {
+  background: #9a0000;
+}
+
 
 /* RESPONDER TABLE */
 .userTable {
@@ -210,15 +247,7 @@
 }
 
 /* BUTTONS */
-.assignBtn {
-  background: #c00;
-  color: white;
-  border: none;
-  padding: 8px 14px;
-  border-radius: 6px;
-  cursor: pointer;
-  font-weight: 600;
-}
+
 
 .assignBtn:hover {
   background: #9a0000;

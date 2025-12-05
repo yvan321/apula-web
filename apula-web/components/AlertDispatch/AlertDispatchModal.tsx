@@ -19,7 +19,6 @@ import { db } from "@/lib/firebase";
 const AlertDispatchModal = () => {
   const [showModal, setShowModal] = useState(false);
 
-  // Modal steps: 1 = Alert list, 2 = Team list, 3 = Confirmation
   const [dispatchStep, setDispatchStep] = useState<1 | 2 | 3>(1);
 
   const [alerts, setAlerts] = useState<any[]>([]);
@@ -28,25 +27,28 @@ const AlertDispatchModal = () => {
   const [responders, setResponders] = useState<any[]>([]);
   const [selectedResponderIds, setSelectedResponderIds] = useState<Set<string>>(new Set());
 
-  // -------------------------------------------
-  // OPEN MODAL EVENT HANDLER
-  // -------------------------------------------
+  const [teams, setTeams] = useState<any[]>([]);
+  const [vehicles, setVehicles] = useState<any[]>([]);
+
+  // ------------------------------------------------------------
+  // OPEN MODAL WHEN TRIGGERED FROM AlertBellButton
+  // ------------------------------------------------------------
   useEffect(() => {
     const openModal = () => {
       loadAlerts();
-      setShowModal(true);
-      setDispatchStep(1); // Start at "Alert Selection"
+      setDispatchStep(1);
       setSelectedAlert(null);
       setSelectedResponderIds(new Set());
+      setShowModal(true);
     };
 
     window.addEventListener("open-alert-dispatch", openModal);
     return () => window.removeEventListener("open-alert-dispatch", openModal);
   }, []);
 
-  // -------------------------------------------
-  // LOAD PENDING ALERTS (Step 1)
-  // -------------------------------------------
+  // ------------------------------------------------------------
+  // LOAD PENDING ALERTS
+  // ------------------------------------------------------------
   const loadAlerts = async () => {
     const snap = await getDocs(
       query(
@@ -58,9 +60,9 @@ const AlertDispatchModal = () => {
     setAlerts(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
   };
 
-  // -------------------------------------------
-  // REALTIME RESPONDERS
-  // -------------------------------------------
+  // ------------------------------------------------------------
+  // REAL-TIME RESPONDERS
+  // ------------------------------------------------------------
   useEffect(() => {
     const unsub = onSnapshot(
       query(collection(db, "users"), where("role", "==", "responder")),
@@ -71,19 +73,91 @@ const AlertDispatchModal = () => {
     return () => unsub();
   }, []);
 
-  // -------------------------------------------
-  // GROUP RESPONDERS BY TEAM + VEHICLE
-  // -------------------------------------------
+  // ------------------------------------------------------------
+  // LOAD TEAMS & VEHICLES
+  // ------------------------------------------------------------
+  useEffect(() => {
+    getDocs(collection(db, "teams")).then((snap) => {
+      setTeams(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+    });
+
+    getDocs(collection(db, "vehicles")).then((snap) => {
+      setVehicles(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+    });
+  }, []);
+
+  // ------------------------------------------------------------
+  // AUTO RESET LOGIC:
+  // A. If TEAM LEADER becomes Available → reset team + vehicle
+  // B. If ALL responders become Available → reset team + vehicle
+  // ------------------------------------------------------------
+  useEffect(() => {
+    if (responders.length === 0 || teams.length === 0 || vehicles.length === 0)
+      return;
+
+    teams.forEach((team) => {
+      const teamResponders = responders.filter((r) => r.teamId === team.id);
+      if (teamResponders.length === 0) return;
+
+      const teamName = team.teamName;
+
+      // Find assigned vehicle
+      const vehicle = vehicles.find((v) => v.assignedTeam === teamName);
+
+      // Find team leader
+      const leader = teamResponders.find((r) => r.id === team.leaderId);
+
+      const leaderResolved = leader && leader.status === "Available";
+      const allAvailable = teamResponders.every((r) => r.status === "Available");
+
+      // If neither condition met → DO NOTHING
+      if (!leaderResolved && !allAvailable) return;
+
+      console.log(
+        `RESET TRIGGERED → Team ${teamName}, leaderResolved=${leaderResolved}, allAvailable=${allAvailable}`
+      );
+
+      // Perform database reset
+      const batch = writeBatch(db);
+
+      // Reset responders
+      teamResponders.forEach((res) => {
+        batch.update(doc(db, "users", res.id), { status: "Available" });
+      });
+
+      // Reset team
+      batch.update(doc(db, "teams", team.id), { status: "Available" });
+
+      // Reset vehicle
+      if (vehicle) {
+        batch.update(doc(db, "vehicles", vehicle.id), { status: "Available" });
+      }
+
+      batch.commit();
+    });
+  }, [responders, teams, vehicles]);
+
+  // ------------------------------------------------------------
+  // GROUP USING teamName + vehicle.code
+  // ------------------------------------------------------------
   const teamVehicleGroups: Record<string, any> = {};
 
   responders.forEach((r) => {
-    const team = r.team || "Unassigned";
-    const vehicle = r.vehicle || "Unassigned";
+    const teamName = teams.find((t) => t.id === r.teamId)?.teamName || "Unassigned";
 
-    const key = `${team}___${vehicle}`;
+    const vehicle = vehicles.find((v) => v.assignedTeam === teamName);
+    const vehicleCode = vehicle?.code || "Unassigned";
+
+    const key = `${teamName}___${vehicleCode}`;
+
     if (!teamVehicleGroups[key]) {
-      teamVehicleGroups[key] = { team, vehicle, responders: [] };
+      teamVehicleGroups[key] = {
+        team: teamName,
+        vehicle: vehicleCode,
+        responders: [],
+      };
     }
+
     teamVehicleGroups[key].responders.push(r);
   });
 
@@ -97,17 +171,17 @@ const AlertDispatchModal = () => {
     return { ...group, status };
   });
 
-  // -------------------------------------------
+  // ------------------------------------------------------------
   // STEP 1 → SELECT ALERT
-  // -------------------------------------------
+  // ------------------------------------------------------------
   const handleAlertSelect = (alert: any) => {
     setSelectedAlert(alert);
-    setDispatchStep(2); // Move to team list
+    setDispatchStep(2);
   };
 
-  // -------------------------------------------
+  // ------------------------------------------------------------
   // STEP 2 → SELECT TEAM
-  // -------------------------------------------
+  // ------------------------------------------------------------
   const handleDispatchTeam = (group: any) => {
     const available = group.responders.filter((r: any) => r.status === "Available");
 
@@ -117,50 +191,84 @@ const AlertDispatchModal = () => {
     }
 
     setSelectedResponderIds(new Set(available.map((r: any) => r.id)));
-    setDispatchStep(3); // Move to confirmation
+    setDispatchStep(3);
   };
 
-  // -------------------------------------------
-  // STEP 3 → DISPATCH RESPONDERS
-  // -------------------------------------------
+  // ------------------------------------------------------------
+  // STEP 3 → DISPATCH NOW
+  // ------------------------------------------------------------
+  // --- SAME IMPORTS ABOVE ---
+
   const dispatchResponders = async () => {
     const selected = responders.filter((r) => selectedResponderIds.has(r.id));
 
     try {
       const batch = writeBatch(db);
+      const ref = doc(collection(db, "dispatches"));
 
-      const dispatchRef = doc(collection(db, "dispatches"));
-
-      batch.set(dispatchRef, {
+      batch.set(ref, {
         alertId: selectedAlert.id,
         alertType: selectedAlert.type,
         alertLocation: selectedAlert.location,
 
-        responders: selected.map((r) => ({
-          id: r.id,
-          name: r.name,
-          email: r.email.toLowerCase(),
-          contact: r.contact || "",
-          team: r.team,
-          vehicle: r.vehicle,
-        })),
+        responders: selected.map((r) => {
+          const teamName =
+            teams.find((t) => t.id === r.teamId)?.teamName || "Unassigned";
 
-        responderEmails: selected.map((r) => r.email.toLowerCase()),
+          const vehicle = vehicles.find((v) => v.assignedTeam === teamName);
+          const vehicleCode = vehicle?.code || "Unassigned";
+
+          return {
+            id: r.id,
+            name: r.name,
+            email: (r.email || "").toLowerCase(),
+            contact: r.contact || "",
+            team: teamName,
+            vehicle: vehicleCode,
+          };
+        }),
+
+        responderEmails: selected.map((r) => (r.email || "").toLowerCase()),
+
         userReported: selectedAlert.userName,
         userAddress: selectedAlert.userAddress,
         userContact: selectedAlert.userContact,
         userEmail: selectedAlert.userEmail,
 
         status: "Dispatched",
-        timestamp: serverTimestamp(),
         dispatchedBy: "Admin Panel",
+        timestamp: serverTimestamp(),
       });
 
+      // Update responders → Dispatched
       selected.forEach((r) =>
         batch.update(doc(db, "users", r.id), { status: "Dispatched" })
       );
 
-      batch.update(doc(db, "alerts", selectedAlert.id), { status: "Dispatched" });
+      // Update alert → Dispatched
+      batch.update(doc(db, "alerts", selectedAlert.id), {
+        status: "Dispatched",
+      });
+
+      // ------------------------------------------------------------
+      // 🚒 UPDATE TEAM + VEHICLE STATUS ON DISPATCH
+      // ------------------------------------------------------------
+      if (selected.length > 0) {
+        const firstResponder = selected[0];
+        const team = teams.find((t) => t.id === firstResponder.teamId);
+
+        if (team) {
+          batch.update(doc(db, "teams", team.id), { status: "Dispatched" });
+        }
+
+        const teamName = team?.teamName;
+        const vehicle = vehicles.find((v) => v.assignedTeam === teamName);
+
+        if (vehicle) {
+          batch.update(doc(db, "vehicles", vehicle.id), { status: "Dispatched" });
+        }
+      }
+      // ------------------------------------------------------------
 
       await batch.commit();
 
@@ -172,16 +280,19 @@ const AlertDispatchModal = () => {
     }
   };
 
+
+
+  // ------------------------------------------------------------
+  // UI (unchanged)
+  // ------------------------------------------------------------
+  
   if (!showModal) return null;
 
-  // ======================================================
-  // UI SECTIONS (STEP 1 → STEP 2 → STEP 3)
-  // ======================================================
   return (
     <div className={styles.modalOverlay}>
       <div className={styles.modalWide}>
-
-        {/* ---------------- STEP 1: ALERT SELECTION ---------------- */}
+        
+        {/* STEP 1: ALERTS */}
         {dispatchStep === 1 && (
           <>
             <h3 className={styles.modalTitle}>Select Alert</h3>
@@ -223,7 +334,7 @@ const AlertDispatchModal = () => {
           </>
         )}
 
-        {/* ---------------- STEP 2: TEAM LIST ---------------- */}
+        {/* STEP 2: TEAM LIST */}
         {dispatchStep === 2 && (
           <>
             <h3 className={styles.modalTitle}>Select Team to Dispatch</h3>
@@ -240,7 +351,7 @@ const AlertDispatchModal = () => {
               </thead>
 
               <tbody>
-                {groupedList.map((g: any, i: number) => (
+                {groupedList.map((g: any, i) => (
                   <tr key={i}>
                     <td>{g.team}</td>
                     <td>{g.vehicle}</td>
@@ -277,7 +388,7 @@ const AlertDispatchModal = () => {
           </>
         )}
 
-        {/* ---------------- STEP 3: CONFIRM RESPONDERS ---------------- */}
+        {/* STEP 3: CONFIRM RESPONDERS */}
         {dispatchStep === 3 && (
           <>
             <h3 className={styles.modalTitle}>Confirm Responders</h3>
@@ -295,14 +406,25 @@ const AlertDispatchModal = () => {
               <tbody>
                 {responders
                   .filter((r) => selectedResponderIds.has(r.id))
-                  .map((r) => (
-                    <tr key={r.id}>
-                      <td>{r.name}</td>
-                      <td>{r.team}</td>
-                      <td>{r.vehicle}</td>
-                      <td>{r.status}</td>
-                    </tr>
-                  ))}
+                  .map((r) => {
+                    const teamName =
+                      teams.find((t) => t.id === r.teamId)?.teamName ||
+                      "Unassigned";
+
+                    const vehicle =
+                      vehicles.find((v) => v.assignedTeam === teamName);
+
+                    const vehicleCode = vehicle?.code || "Unassigned";
+
+                    return (
+                      <tr key={r.id}>
+                        <td>{r.name}</td>
+                        <td>{teamName}</td>
+                        <td>{vehicleCode}</td>
+                        <td>{r.status}</td>
+                      </tr>
+                    );
+                  })}
               </tbody>
             </table>
 

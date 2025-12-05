@@ -1,0 +1,309 @@
+/* MAIN */
+.container {
+  padding: 20px;
+}
+
+.pageWrapper {
+  background: #e4e4e4;
+  min-height: 100vh;
+}
+
+.contentSection {
+  background: #fff;
+  padding: 20px;
+  border-radius: 12px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+}
+
+.pageTitle {
+  color: #800000;
+  font-size: 1.6rem;
+  font-weight: 700;
+}
+
+.separator {
+  margin: 10px 0;
+  border: 0;
+  border-top: 1px solid #ddd;
+}
+
+/* ============================= */
+/*          TABS                 */
+/* ============================= */
+
+.tabContainer {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.tabBtn {
+  background: #ddd;
+  border: none;
+  padding: 10px 18px;
+  font-weight: 600;
+  border-radius: 8px;
+  cursor: pointer;
+  color: #333;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: 0.2s ease;
+}
+
+.tabBtn:hover {
+  background: #bbb;
+}
+
+.activeTab {
+  background: #8b0000;
+  color: white;
+}
+
+/* ============================= */
+/* HEADER + ADD BUTTON           */
+/* ============================= */
+
+.headerRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 14px;
+}
+
+.subTitle {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #444;
+}
+
+.addBtn {
+  background: #8b0000;
+  color: white;
+  padding: 8px 14px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.addBtn:hover {
+  background: #5e0000;
+}
+
+/* ============================= */
+/*         TABLE                 */
+/* ============================= */
+
+.dataTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.95rem;
+}
+
+.dataTable th {
+  background: #8b0000;
+  color: white;
+  padding: 10px;
+  text-align: left;
+}
+
+.dataTable td {
+  padding: 10px;
+  border-bottom: 1px solid #eee;
+}
+
+/* STATUS COLORS */
+.statusAvailable {
+  background: #28a745;
+  color: white;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-weight: bold;
+}
+
+.statusDispatched {
+  background: #f0ad4e;
+  color: white;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-weight: bold;
+}
+
+.statusUnavailable {
+  background: #6c757d;
+  color: white;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-weight: bold;
+}
+
+/* ============================= */
+/*        ACTION BUTTONS         */
+/* ============================= */
+
+.actionBtn {
+  padding: 6px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  border: none;
+  font-weight: 600;
+  color: white;
+}
+
+.editBtn {
+  background: #f0ad4e;
+}
+
+.editBtn:hover {
+  background: #d99022;
+}
+
+.deleteBtn {
+  background: #dc3545;
+}
+
+.deleteBtn:hover {
+  background: #b52a36;
+}
+
+/* ============================= */
+/*           MODALS              */
+/* ============================= */
+
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.45);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+  padding: 10px;
+}
+
+.modalContent {
+  background: white;
+  width: 420px;
+  padding: 25px;
+  border-radius: 14px;
+  animation: fadeInScale 0.25s ease;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.25);
+}
+
+.modalTitle {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: #800000;
+  margin-bottom: 15px;
+}
+
+/* ============================= */
+/*        MODAL INPUTS           */
+/* ============================= */
+
+.label {
+  font-weight: 600;
+  margin-bottom: 6px;
+  display: block;
+  color: #444;
+}
+
+.input {
+  width: 100%;
+  padding: 10px 12px;
+  margin-bottom: 12px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 0.95rem;
+}
+
+.modalActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.saveBtn {
+  background: #28a745;
+  color: white;
+  padding: 10px 14px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.saveBtn:hover {
+  background: #1f7e33;
+}
+
+.closeBtn {
+  background: #555;
+  color: white;
+  padding: 10px 14px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.closeBtn:hover {
+  background: #333;
+}
+
+/* ============================= */
+/* SUCCESS MODAL                 */
+/* ============================= */
+
+.successModal {
+  background: white;
+  width: 380px;
+  padding: 25px;
+  border-radius: 14px;
+  text-align: center;
+  animation: fadeInScale 0.25s ease;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.25);
+}
+
+.successIcon {
+  font-size: 48px;
+  color: #28a745;
+  margin-bottom: 10px;
+  font-weight: bold;
+}
+
+.successTitle {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: #28a745;
+  margin-bottom: 5px;
+}
+
+.successCloseBtn {
+  background: #28a745;
+  color: white;
+  padding: 10px 18px;
+  border-radius: 8px;
+  cursor: pointer;
+  border: none;
+  font-weight: bold;
+}
+
+.successCloseBtn:hover {
+  background: #1e7e34;
+}
+
+/* ============================= */
+/* ANIMATIONS                    */
+/* ============================= */
+
+@keyframes fadeInScale {
+  from {
+    opacity: 0;
+    transform: scale(0.85);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}

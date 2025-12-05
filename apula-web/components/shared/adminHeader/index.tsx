@@ -170,10 +170,21 @@ export default function AdminHeader() {
             <span>Request</span>
           </a>
 
-          <a
-  href="/dashboard/TeamnVechi"
+                <a
+  href="/dashboard/Management"
   className={`${styles.sidebarLink} ${
-    isActive("/dashboard/TeamnVechi") ? styles.activeLink : ""
+    isActive("/dashboard/Management") ? styles.activeLink : ""
+  }`}
+>
+  <ClipboardList size={18} className={styles.icon} />
+<span>Team and Vehicle</span>
+
+</a>
+
+          <a
+  href="/dashboard/Assign"
+  className={`${styles.sidebarLink} ${
+    isActive("/dashboard/Assign") ? styles.activeLink : ""
   }`}
 >
   <ClipboardList size={18} className={styles.icon} />
