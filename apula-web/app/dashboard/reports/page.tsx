@@ -7,6 +7,7 @@ import AdminHeader from "@/components/shared/adminHeader";
 import AlertBellButton from "@/components/AlertDispatch/AlertBellButton";
 import AlertDispatchModal from "@/components/AlertDispatch/AlertDispatchModal";
 import styles from "./reportStyles.module.css";
+import jsPDF from "jspdf";
 
 import {
   collection,
@@ -15,6 +16,8 @@ import {
   onSnapshot,
   updateDoc,
   doc,
+  where,
+  getDocs,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
@@ -22,13 +25,16 @@ const ReportPage = () => {
   const [reports, setReports] = useState([]);
   const [filteredReports, setFilteredReports] = useState([]);
   const [search, setSearch] = useState("");
-  const [filterStatus, setFilterStatus] = useState("all");
+  const [filterStatus, setFilterStatus] = useState("All");
 
   const [selectedReport, setSelectedReport] = useState(null);
   const [editMode, setEditMode] = useState(false);
   const [editedStatus, setEditedStatus] = useState("");
 
-  // Load data
+  const [responders, setResponders] = useState([]);
+  const [dispatchInfo, setDispatchInfo] = useState(null);
+
+  // ================= LOAD ALERTS =================
   useEffect(() => {
     const q = query(collection(db, "alerts"), orderBy("timestamp", "desc"));
     const unsub = onSnapshot(q, (snapshot) => {
@@ -39,11 +45,11 @@ const ReportPage = () => {
     return () => unsub();
   }, []);
 
-  // Search + Filter
+  // ================= SEARCH + FILTER =================
   useEffect(() => {
-    let result = reports;
+    let result = [...reports];
 
-    if (filterStatus !== "all") {
+    if (filterStatus !== "All") {
       result = result.filter((r) => r.status === filterStatus);
     }
 
@@ -54,12 +60,41 @@ const ReportPage = () => {
     );
 
     setFilteredReports(result);
-  }, [search, reports, filterStatus]);
+  }, [reports, search, filterStatus]);
 
+  // ================= LOAD DISPATCH + RESPONDERS =================
+  useEffect(() => {
+    if (!selectedReport) return;
+
+    const loadDispatch = async () => {
+      const q = query(
+        collection(db, "dispatches"),
+        where("alertId", "==", selectedReport.id)
+      );
+
+      const snap = await getDocs(q);
+
+      if (!snap.empty) {
+        const dispatch = snap.docs[0].data();
+        setDispatchInfo(dispatch);
+        setResponders(dispatch.responders || []);
+      } else {
+        setDispatchInfo(null);
+        setResponders([]);
+      }
+    };
+
+    loadDispatch();
+  }, [selectedReport]);
+
+  // ================= ACTIONS =================
   const openReport = (report) => setSelectedReport(report);
+
   const closeModal = () => {
     setSelectedReport(null);
     setEditMode(false);
+    setResponders([]);
+    setDispatchInfo(null);
   };
 
   const handleEdit = () => {
@@ -68,11 +103,62 @@ const ReportPage = () => {
   };
 
   const handleSave = async () => {
+    if (!selectedReport) return;
     const ref = doc(db, "alerts", selectedReport.id);
     await updateDoc(ref, { status: editedStatus });
     setEditMode(false);
   };
 
+  // ================= PDF (ONE REPORT) =================
+  const downloadSingleReportPDF = (report) => {
+    const doc = new jsPDF();
+    let y = 20;
+
+    doc.setFontSize(18);
+    doc.text("Incident Report", 14, y);
+    y += 15;
+
+    doc.setFontSize(11);
+    doc.text(`Name: ${report.userName}`, 14, y); y += 8;
+    doc.text(`Contact: ${report.userContact}`, 14, y); y += 8;
+    doc.text(`Email: ${report.userEmail}`, 14, y); y += 8;
+    doc.text(`Address: ${report.userAddress}`, 14, y); y += 8;
+    doc.text(`Status: ${report.status}`, 14, y); y += 8;
+
+    const receivedAt = report.timestamp
+      ? new Date(report.timestamp.seconds * 1000).toLocaleString()
+      : "Unknown";
+
+    doc.text(`Alert Received At: ${receivedAt}`, 14, y);
+    y += 8;
+
+    if (dispatchInfo?.timestamp) {
+      const dispatchedAt = new Date(
+        dispatchInfo.timestamp.seconds * 1000
+      ).toLocaleString();
+
+      doc.text(`Dispatched At: ${dispatchedAt}`, 14, y);
+      y += 8;
+    }
+
+    if (responders.length > 0) {
+      y += 6;
+      doc.setFontSize(13);
+      doc.text("Assigned Responders:", 14, y);
+      y += 8;
+
+      doc.setFontSize(11);
+      responders.forEach((r) => {
+        doc.text(`Name: ${r.name}`, 20, y); y += 6;
+        doc.text(`Contact: ${r.contact}`, 20, y); y += 6;
+        doc.text(`Email: ${r.email}`, 20, y); y += 8;
+      });
+    }
+
+    doc.save(`incident_report_${report.id}.pdf`);
+  };
+
+  // ================= RENDER =================
   return (
     <div>
       <AdminHeader />
@@ -87,9 +173,8 @@ const ReportPage = () => {
           <h2 className={styles.pageTitle}>Incident Reports</h2>
           <hr className={styles.separator} />
 
-          {/* Search + Filters Row */}
+          {/* SEARCH + FILTER */}
           <div className={styles.filtersRow}>
-            {/* SEARCH */}
             <div className={styles.searchWrapper}>
               <input
                 type="text"
@@ -100,164 +185,142 @@ const ReportPage = () => {
               <FiSearch />
             </div>
 
-            {/* FILTERS */}
             <div className={styles.statusFilters}>
-              <button
-                className={`${styles.filterBtn} ${styles.allBtn} ${
-                  filterStatus === "all" ? styles.activeFilter : ""
-                }`}
-                onClick={() => setFilterStatus("all")}
-              >
-                All
-              </button>
-
-              <button
-                className={`${styles.filterBtn} ${styles.pendingBtn} ${
-                  filterStatus === "Pending" ? styles.activeFilter : ""
-                }`}
-                onClick={() => setFilterStatus("Pending")}
-              >
-                Pending
-              </button>
-
-              <button
-                className={`${styles.filterBtn} ${styles.dispatchedBtn} ${
-                  filterStatus === "Dispatched" ? styles.activeFilter : ""
-                }`}
-                onClick={() => setFilterStatus("Dispatched")}
-              >
-                Dispatched
-              </button>
-
-              <button
-                className={`${styles.filterBtn} ${styles.resolvedBtn} ${
-                  filterStatus === "Resolved" ? styles.activeFilter : ""
-                }`}
-                onClick={() => setFilterStatus("Resolved")}
-              >
-                Resolved
-              </button>
+              {["All", "Pending", "Dispatched", "Resolved"].map((s) => (
+                <button
+                  key={s}
+                  className={`${styles.filterBtn} ${styles[`${s.toLowerCase()}Btn`]} ${
+                    filterStatus === s ? styles.activeFilter : ""
+                  }`}
+                  onClick={() => setFilterStatus(s)}
+                >
+                  {s}
+                </button>
+              ))}
             </div>
           </div>
 
-          {/* Cards */}
-          <div className={styles.cardGrid}>
-            {filteredReports.length === 0 ? (
-              <p className={styles.noResults}>No reports found.</p>
-            ) : (
-              filteredReports.map((report) => (
-                <div
-                  key={report.id}
-                  className={styles.cardItem}
-                  onClick={() => openReport(report)}
-                >
-                  <span
-                    className={`${styles.status} ${
-                      styles[report.status?.toLowerCase()]
-                    }`}
-                  >
-                    {report.status}
-                  </span>
-
-                  <h3>{report.userName || "Unknown User"}</h3>
-
-                  <p>
-                    <FaMapMarkerAlt /> {report.userAddress || "No address"}
-                  </p>
-
-                  <button className={styles.viewBtn}>View</button>
-                </div>
-              ))
-            )}
+          {/* TABLE */}
+          <div className={styles.tableWrapper}>
+            <table className={styles.reportTable}>
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Address</th>
+                  <th>Status</th>
+                  <th>Received At</th>
+                  <th />
+                </tr>
+              </thead>
+              <tbody>
+                {filteredReports.map((r) => (
+                  <tr key={r.id}>
+                    <td>{r.userName}</td>
+                    <td>{r.userAddress}</td>
+                    <td>
+                      <span className={`${styles.statusBadge} ${styles[r.status?.toLowerCase()]}`}>
+                        {r.status}
+                      </span>
+                    </td>
+                    <td>
+                      {r.timestamp
+                        ? new Date(r.timestamp.seconds * 1000).toLocaleString()
+                        : "Unknown"}
+                    </td>
+                    <td>
+                      <button
+                        className={styles.viewBtn}
+                        onClick={() => openReport(r)}
+                      >
+                        View
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
 
-        {selectedReport && (
-          <div className={styles.modalOverlay}>
-            <div className={styles.modalContent}>
-              {/* EDIT BUTTON - TOP RIGHT */}
-              {!editMode && (
-                <button className={styles.editBtn} onClick={handleEdit}>
-                 Edit
-                </button>
-              )}
+        {/* MODAL */}
+        {/* MODAL */}
+{selectedReport && (
+  <div className={styles.modalOverlay}>
+    <div className={styles.modalContent}>
+      <h3 className={styles.modalTitle}>Report Details</h3>
 
-              {!editMode ? (
-                <>
-                  <h3 className={styles.modalTitle}>Report Details</h3>
+     <div className={`${styles.modalDetails} ${styles.modalSection}`}>
 
-                  <div className={styles.modalDetails}>
-                    <p>
-                      <FaUser /> {selectedReport.userName || "N/A"}
-                    </p>
-                    <p>
-                      <FaPhone /> {selectedReport.userContact || "N/A"}
-                    </p>
-                    <p>
-                      <FaEnvelope /> {selectedReport.userEmail || "N/A"}
-                    </p>
-                    <p>
-                      <FaMapMarkerAlt /> {selectedReport.userAddress || "N/A"}
-                    </p>
+        <p className={styles.iconRow}>
+  <FaUser />
+  {selectedReport.userName}
+</p>
 
-                    {/* STATUS INLINE HERE */}
-                    <p className={styles.statusRow}>
-                      <strong>Status:</strong>
-                      <span
-                        className={`${styles.statusBadge} ${
-                          styles[selectedReport.status?.toLowerCase()]
-                        }`}
-                      >
-                        {selectedReport.status}
-                      </span>
-                    </p>
+        <p className={styles.iconRow}>
+  <FaPhone />
+  {selectedReport.userContact}
+</p>
 
-                    <p>
-                      <strong>Date:</strong>{" "}
-                      {selectedReport.timestamp
-                        ? new Date(
-                            selectedReport.timestamp.seconds * 1000
-                          ).toLocaleString()
-                        : "Unknown"}
-                    </p>
-                  </div>
+        <p className={styles.iconRow}>
+  <FaEnvelope />
+  {selectedReport.userEmail}
+</p>
 
-                  <button className={styles.closeBtn} onClick={closeModal}>
-                    Close
-                  </button>
-                </>
-              ) : (
-                <>
-                  <h3 className={styles.modalTitle}>Edit Status</h3>
+        <p className={styles.iconRow}>
+  <FaMapMarkerAlt />
+  {selectedReport.userAddress}
+</p>
 
-                  <div className={styles.editForm}>
-                    <label>Status</label>
-                    <select
-                      value={editedStatus}
-                      onChange={(e) => setEditedStatus(e.target.value)}
-                    >
-                      <option value="Pending">Pending</option>
-                      <option value="Dispatched">Dispatched</option>
-                      <option value="Resolved">Resolved</option>
-                    </select>
+        <p>
+          <strong>Alert Received At:</strong>{" "}
+          {new Date(
+            selectedReport.timestamp.seconds * 1000
+          ).toLocaleString()}
+        </p>
 
-                    <div className={styles.editActions}>
-                      <button className={styles.saveBtn} onClick={handleSave}>
-                        Save
-                      </button>
-                      <button
-                        className={styles.cancelBtn}
-                        onClick={() => setEditMode(false)}
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  </div>
-                </>
-              )}
-            </div>
-          </div>
+        {dispatchInfo?.timestamp && (
+          <p>
+            <strong>Dispatched At:</strong>{" "}
+            {new Date(
+              dispatchInfo.timestamp.seconds * 1000
+            ).toLocaleString()}
+          </p>
         )}
+      </div>
+
+      {responders.length > 0 && (
+        <div className={styles.responderSection}>
+          <div className={styles.responderTitle}>
+            Assigned Responder(s)
+          </div>
+
+          {responders.map((r, i) => (
+            <div key={i} className={styles.responderItem}>
+              {r.name} • {r.contact}
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div className={styles.modalActions}>
+        <button
+          className={styles.saveBtn}
+          onClick={() => downloadSingleReportPDF(selectedReport)}
+        >
+          Download PDF
+        </button>
+
+        <button
+          className={styles.closeBtn}
+          onClick={closeModal}
+        >
+          Close
+        </button>
+      </div>
+    </div>
+  </div>
+)}
+
       </div>
     </div>
   );

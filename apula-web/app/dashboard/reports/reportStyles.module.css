@@ -119,6 +119,16 @@
   box-shadow: 0 4px 14px rgba(163, 0, 0, 0.35);
 }
 
+
+.modalSection {
+  padding: 12px 0;
+  border-bottom: 1px solid #eee;
+}
+
+.modalSection:last-child {
+  border-bottom: none;
+}
+
 /* ----------- CARD GRID ----------- */
 .cardGrid {
   display: grid;
@@ -228,17 +238,21 @@
 
 .modalContent {
   background: #ffffff;
-  padding: 32px;
+  padding: 36px 40px;
   border-radius: 20px;
-  width: 480px;
-  max-width: 92%;
+  width: 620px;
+  max-width: 95%;
+  max-height: 90vh;
+  overflow-y: auto;
+
   box-shadow: 0 12px 38px rgba(0, 0, 0, 0.25);
-  animation: slideUp 0.35s ease;
   position: relative;
+
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 22px;
 }
+
 
 /* TITLE */
 .modalTitle {
@@ -252,17 +266,27 @@
 .modalDetails {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 14px;
   font-size: 1rem;
 }
 
 .modalDetails p {
-  display: flex;
-  align-items: center;
-  gap: 10px;
   margin: 0;
   color: #333;
+  line-height: 1.5;
 }
+
+
+.modalActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 14px;
+  padding-top: 16px;
+  margin-top: 10px;
+  border-top: 1px solid #eee;
+}
+
+
 
 /* INLINE STATUS BADGE */
 .statusRow {
@@ -301,7 +325,7 @@
 
 /* CLOSE */
 .closeBtn {
-  align-self: flex-end;
+
   padding: 8px 14px;
   border-radius: 10px;
   border: none;
@@ -368,6 +392,7 @@
 .saveBtn:hover {
   background: #CC0000;
   transform: translateY(-2px);
+  box-shadow: 0 6px 14px rgba(163, 0, 0, 0.35);
 }
 
 .cancelBtn {
@@ -385,6 +410,77 @@
   background: #d4d4d4;
   transform: translateY(-2px);
 }
+
+.iconRow {
+  display: grid;
+  grid-template-columns: 22px 1fr;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+
+
+/* ====================== TABLE ====================== */
+
+.tableWrapper {
+  margin-top: 25px;
+  overflow-x: auto;
+}
+
+.reportTable {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.1);
+}
+
+.reportTable thead {
+  background: #A30000;
+  color: white;
+}
+
+.reportTable th,
+.reportTable td {
+  padding: 14px 16px;
+  text-align: left;
+  font-size: 0.95rem;
+}
+
+.reportTable tbody tr {
+  border-bottom: 1px solid #eee;
+}
+
+.reportTable tbody tr:hover {
+  background: #f9f9f9;
+}
+
+.statusBadge {
+  padding: 6px 12px;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 0.85rem;
+}
+
+.responderSection {
+  margin-top: 12px;
+  padding-top: 14px;
+  border-top: 1px solid #eee;
+}
+
+.responderTitle {
+  font-weight: 700;
+  color: #A30000;
+  margin-bottom: 8px;
+}
+
+.responderItem {
+  margin-left: 10px;
+  color: #333;
+  font-size: 0.95rem;
+}
+
 
 /* Animations */
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
