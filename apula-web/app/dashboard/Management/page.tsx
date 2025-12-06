@@ -110,28 +110,56 @@ export default function TeamVehiclePage() {
   // ------------------------------------------
   // Create team (defaults to Available)
   // ------------------------------------------
-  const createTeam = async () => {
-    if (!newTeamName.trim()) return alert("Please enter team name");
-    if (!selectedLeader) return alert("Please select a leader");
+ const createTeam = async () => {
+  if (!newTeamName.trim()) return alert("Please enter team name");
+  if (!selectedLeader) return alert("Please select a leader");
 
-    try {
-      await addDoc(collection(db, "teams"), {
-        teamName: newTeamName.trim(),
-        leaderId: selectedLeader,
-        leaderName:
-          (responders.find((r) => r.id === selectedLeader) || {}).name || "",
-        members: [],
-        status: "Available",
-        createdAt: serverTimestamp(),
-      });
-      setNewTeamName("");
-      setSelectedLeader("");
-      setShowAddTeamModal(false);
-    } catch (err) {
-      console.error(err);
-      alert("Error creating team");
-    }
-  };
+  try {
+    const leader = responders.find((r) => r.id === selectedLeader);
+    if (!leader) return alert("Leader not found");
+
+    const batch = writeBatch(db);
+
+    // ✅ Create team ref
+    const teamRef = doc(collection(db, "teams"));
+
+    // ✅ TEAM DOC
+    batch.set(teamRef, {
+      teamName: newTeamName.trim(),
+      leaderId: leader.id,
+      leaderName: leader.name,
+      members: [
+        {
+          id: leader.id,
+          name: leader.name,
+          status: leader.status || "Available",
+          teamName: newTeamName.trim(),
+        },
+      ],
+      status: "Available",
+      createdAt: serverTimestamp(),
+    });
+
+    // ✅ UPDATE LEADER USER (NO VEHICLE HERE)
+    batch.update(doc(db, "users", leader.id), {
+      teamId: teamRef.id,
+      teamName: newTeamName.trim(),
+      vehicleId: "",
+      vehicleCode: "",
+      vehiclePlate: "",
+    });
+
+    await batch.commit();
+
+    setNewTeamName("");
+    setSelectedLeader("");
+    setShowAddTeamModal(false);
+  } catch (err) {
+    console.error(err);
+    alert("Error creating team");
+  }
+};
+
 
   // ------------------------------------------
   // Create vehicle
@@ -178,25 +206,80 @@ export default function TeamVehiclePage() {
 
   // Save edited team
   const saveEditTeam = async () => {
-    if (!editingTeam) return;
-    if (!editingTeam.teamName.trim()) return alert("Team name required");
+  if (!editingTeam) return;
 
-    try {
-      const teamRef = doc(db, "teams", editingTeam.id);
-      await updateDoc(teamRef, {
-        teamName: editingTeam.teamName.trim(),
-        leaderId: editingTeam.leaderId || "",
-        leaderName:
-          (responders.find((r) => r.id === editingTeam.leaderId) || {}).name ||
-          "",
-        status: editingTeam.status || "Available",
+  try {
+    const teamRef = doc(db, "teams", editingTeam.id);
+   // ✅ Sync vehicle to team leader + members
+const team = teams.find(t => t.id === editingVehicle.assignedTeamId);
+if (team) {
+  const batch = writeBatch(db);
+
+  team.members.forEach((m: any) => {
+    batch.update(doc(db, "users", m.id), {
+      vehicleId: editingVehicle.id,
+      vehicleCode: editingVehicle.code,
+      vehiclePlate: editingVehicle.plate,
+    });
+  });
+
+  await batch.commit();
+}
+
+
+    const oldLeaderId = team.leaderId;
+    const newLeaderId = editingTeam.leaderId;
+
+    const batch = writeBatch(db);
+
+    // Remove old leader from members
+    let updatedMembers = (team.members || []).filter(
+      (m: any) => m.id !== oldLeaderId
+    );
+
+    // Add new leader
+    const newLeader = responders.find(r => r.id === newLeaderId);
+    if (newLeader) {
+      updatedMembers.push({
+        id: newLeader.id,
+        name: newLeader.name,
+        status: newLeader.status || "Available",
+        teamName: editingTeam.teamName,
       });
-      setEditingTeam(null);
-    } catch (err) {
-      console.error(err);
-      alert("Error updating team");
+
+      batch.update(doc(db, "users", newLeader.id), {
+        teamId: team.id,
+        teamName: editingTeam.teamName,
+      });
     }
-  };
+
+    // Clear old leader
+    if (oldLeaderId) {
+      batch.update(doc(db, "users", oldLeaderId), {
+        teamId: "",
+        teamName: "",
+        vehicleId: "",
+        vehicleCode: "",
+        vehiclePlate: "",
+      });
+    }
+
+    // Update team
+    batch.update(teamRef, {
+      teamName: editingTeam.teamName,
+      leaderId: newLeaderId,
+      leaderName: newLeader?.name || "",
+      members: updatedMembers,
+      status: editingTeam.status,
+    });
+
+    await batch.commit();
+    setEditingTeam(null);
+  } catch (err) {
+    console.error(err);
+    alert("Error updating team");
+  }
+};
 
   // Delete team
   const deleteTeam = async (teamId: string) => {
@@ -243,28 +326,51 @@ export default function TeamVehiclePage() {
   };
 
   // Save edited vehicle
-  const saveEditVehicle = async () => {
-    if (!editingVehicle) return;
-    if (!editingVehicle.code.trim()) return alert("Vehicle code required");
+ const saveEditVehicle = async () => {
+  if (!editingVehicle) return;
 
-    try {
-      const vehicleRef = doc(db, "vehicles", editingVehicle.id);
-      const teamDoc = teams.find((t) => t.id === editingVehicle.assignedTeamId);
+  try {
+    const batch = writeBatch(db);
+    const vehicleRef = doc(db, "vehicles", editingVehicle.id);
 
-      await updateDoc(vehicleRef, {
-        code: editingVehicle.code.trim(),
-        plate: editingVehicle.plate?.trim() || "",
-        assignedTeamId: editingVehicle.assignedTeamId || "",
-        assignedTeam: teamDoc ? teamDoc.teamName : "",
-        status: editingVehicle.status || "Available",
+    const team = teams.find(t => t.id === editingVehicle.assignedTeamId);
+
+    // ✅ Update vehicle doc
+    batch.update(vehicleRef, {
+      code: editingVehicle.code,
+      plate: editingVehicle.plate,
+      assignedTeamId: team?.id || "",
+      assignedTeam: team?.teamName || "",
+      status: editingVehicle.status || "Available",
+    });
+
+    // ✅ CRITICAL FIX: UPDATE ALL USERS IN TEAM (INCLUDING LEADER)
+    if (team) {
+      const q = query(
+        collection(db, "users"),
+        where("teamId", "==", team.id)
+      );
+      const snap = await getDocs(q);
+
+      snap.docs.forEach(d => {
+        batch.update(doc(db, "users", d.id), {
+          vehicleId: editingVehicle.id,
+          vehicleCode: editingVehicle.code,
+          vehiclePlate: editingVehicle.plate,
+        });
       });
-
-      setEditingVehicle(null);
-    } catch (err) {
-      console.error(err);
-      alert("Error updating vehicle");
     }
-  };
+
+    await batch.commit();
+    setEditingVehicle(null);
+  } catch (err) {
+    console.error(err);
+    alert("Failed to update vehicle");
+  }
+};
+
+
+
 
   // Delete vehicle
   const deleteVehicle = async (vehicleId: string) => {
