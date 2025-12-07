@@ -293,6 +293,17 @@
   background: #1e7e34;
 }
 
+
+.viewBtn {
+  background-color: #c00;
+  color: white;
+  padding: 8px 14px;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+}
+
+
 /* Animation */
 @keyframes fadeInScale {
   from {

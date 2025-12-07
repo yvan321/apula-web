@@ -54,6 +54,40 @@ const DispatchPage: React.FC = () => {
   const [selectedResponderIds, setSelectedResponderIds] = useState<Set<string>>(new Set());
   const [showSuccessModal, setShowSuccessModal] = useState(false);
 
+  const [selectedDispatch, setSelectedDispatch] = useState<any>(null);
+const [showDispatchInfoModal, setShowDispatchInfoModal] = useState(false);
+
+
+const viewDispatchInfo = async (teamName: string) => {
+  const snap = await getDocs(
+  query(
+    collection(db, "dispatches"),
+    orderBy("timestamp", "desc")
+  )
+);
+
+const latest = snap.docs
+  .map(d => ({ id: d.id, ...d.data() }))
+  .find(d =>
+    d.status === "Dispatched" &&
+    d.responders?.some((r: any) => r.teamName === teamName)
+  );
+
+
+  if (!latest) {
+    alert("No dispatch record found for this team.");
+    return;
+  }
+
+  setSelectedDispatch(latest);
+  setShowDispatchInfoModal(true);
+};
+
+
+
+  
+  
+
   // ---------------------------
   // Load responders (real-time)
   // ---------------------------
@@ -112,37 +146,33 @@ const DispatchPage: React.FC = () => {
   // ---------------------------
   // Group responders by teamName + vehicle assigned to team
   // ---------------------------
-  const teamVehicleGroups: Record<string, any> = {};
+ const groupedList = teams
+  .map(team => {
+    // ✅ take only responders that belong to THIS team
+    const members = responders.filter(r => r.teamId === team.id);
 
-  filteredResponders.forEach((r) => {
-    const team = r.teamName || "Unassigned";
+    // ❌ skip teams with NO members
+    if (members.length === 0) return null;
 
-    // Find vehicle matching this team (by assignedTeam or assignedTeamId)
-    // Prefer assignedTeam string match, fallback to matching assignedTeamId === r.teamId
-    const vehicleDoc =
-      vehicles.find((v) => (v.assignedTeam || "") === team) ||
-      vehicles.find((v) => v.assignedTeamId && v.assignedTeamId === r.teamId);
+    // ✅ find vehicle assigned to this team
+    const vehicle =
+      vehicles.find(v => v.assignedTeamId === team.id)?.code || "Unassigned";
 
-    const vehicle = vehicleDoc ? vehicleDoc.code : "Unassigned";
+    const statuses = members.map(m => m.status);
 
-    const key = `${team}___${vehicle}`;
-    if (!teamVehicleGroups[key]) {
-      teamVehicleGroups[key] = { team, vehicle, responders: [] as any[] };
-    }
+    let status = "Unavailable";
+    if (statuses.some(s => s === "Available")) status = "Available";
+    if (statuses.every(s => s === "Dispatched")) status = "Dispatched";
 
-    teamVehicleGroups[key].responders.push(r);
-  });
+    return {
+      team: team.teamName,
+      vehicle,
+      responders: members,
+      status
+    };
+  })
+  .filter(Boolean); // ✅ removes nulls
 
-  // Determine status for each group
-  const groupedList = Object.values(teamVehicleGroups).map((group: any) => {
-    const statuses = group.responders.map((r: any) => r.status);
-
-    let groupStatus = "Unavailable";
-    if (statuses.some((s) => s === "Available")) groupStatus = "Available";
-    if (statuses.every((s) => s === "Dispatched")) groupStatus = "Dispatched";
-
-    return { ...group, status: groupStatus };
-  });
 
   // ---------------------------
   // Open alert modal (fetch pending alerts)
@@ -447,12 +477,26 @@ const DispatchPage: React.FC = () => {
                       </span>
                     </td>
                     <td>
-                      <button
-                        className={styles.dispatchBtn}
-                        onClick={() => handleDispatchTeam(group)}
-                      >
-                        <FaTruck /> Dispatch Team
-                      </button>
+                      <td>
+  {group.status === "Available" && (
+    <button
+      className={styles.dispatchBtn}
+      onClick={() => handleDispatchTeam(group)}
+    >
+      <FaTruck /> Dispatch Team
+    </button>
+  )}
+
+  {group.status === "Dispatched" && (
+    <button
+      className={styles.viewBtn}
+      onClick={() => viewDispatchInfo(group.team)}
+    >
+      View Alert
+    </button>
+  )}
+</td>
+
                     </td>
                   </tr>
                 ))
@@ -572,8 +616,62 @@ const DispatchPage: React.FC = () => {
           </div>
         </div>
       )}
+      {showDispatchInfoModal && selectedDispatch && (
+  <div className={styles.modalOverlay} onClick={() => setShowDispatchInfoModal(false)}>
+    <div className={styles.modalWide} onClick={(e) => e.stopPropagation()}>
+     <h3 className={styles.modalTitle}>Dispatch Details</h3>
+
+<div className={styles.section}>
+  <p><strong>Alert Type:</strong> {selectedDispatch.alertType}</p>
+  <p><strong>Location:</strong> {selectedDispatch.alertLocation}</p>
+  <p><strong>Dispatched By:</strong> {selectedDispatch.dispatchedBy}</p>
+  <p>
+    <strong>Time:</strong>{" "}
+    {selectedDispatch.timestamp
+      ? new Date(selectedDispatch.timestamp.seconds * 1000).toLocaleString()
+      : "—"}
+  </p>
+</div>
+
+<hr className={styles.divider} />
+
+<div className={styles.section}>
+  <h4>Reported By:</h4>
+  <p><strong>Name:</strong> {selectedDispatch.userReported}</p>
+  <p><strong>Contact:</strong> {selectedDispatch.userContact}</p>
+  <p><strong>Email:</strong> {selectedDispatch.userEmail}</p>
+  <p><strong>Address:</strong> {selectedDispatch.userAddress}</p>
+</div>
+
+<hr className={styles.divider} />
+
+<div className={styles.section}>
+  <h4>Responders:</h4>
+  <ul className={styles.responderList}>
+    {selectedDispatch.responders?.map((r: any) => (
+      <li key={r.id}>
+        <strong>{r.name}</strong> — {r.teamName}  
+        <br />
+        <small>{r.contact} | {r.email}</small>
+      </li>
+    ))}
+  </ul>
+</div>
+
+
+      <button className={styles.closeBtn} onClick={() => setShowDispatchInfoModal(false)}>
+        Close
+      </button>
     </div>
+  </div>
+)}
+
+    </div>
+    
   );
+  
 };
+
+
 
 export default DispatchPage;

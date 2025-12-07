@@ -30,6 +30,36 @@ const AlertDispatchModal = () => {
   const [teams, setTeams] = useState<any[]>([]);
   const [vehicles, setVehicles] = useState<any[]>([]);
 
+  const [selectedDispatch, setSelectedDispatch] = useState<any>(null);
+const [showViewModal, setShowViewModal] = useState(false);
+
+
+  const viewDispatchInfo = async (teamName: string) => {
+  const snap = await getDocs(
+    query(
+      collection(db, "dispatches"),
+      orderBy("timestamp", "desc")
+    )
+  );
+
+  const latest = snap.docs
+    .map(d => ({ id: d.id, ...d.data() }))
+    .find(d =>
+      d.status === "Dispatched" &&
+      d.responders?.some((r: any) => r.team === teamName)
+    );
+
+  if (!latest) {
+    alert("No dispatch record found for this team.");
+    return;
+  }
+
+  setSelectedDispatch(latest);
+  setShowViewModal(true);
+};
+
+
+
   // ------------------------------------------------------------
   // OPEN MODAL WHEN TRIGGERED FROM AlertBellButton
   // ------------------------------------------------------------
@@ -140,36 +170,35 @@ const AlertDispatchModal = () => {
   // ------------------------------------------------------------
   // GROUP USING teamName + vehicle.code
   // ------------------------------------------------------------
-  const teamVehicleGroups: Record<string, any> = {};
+// ------------------------------------------------------------
+// GROUP LOGIC EXACTLY LIKE DispatchPage
+// ------------------------------------------------------------
+const groupedList = teams
+  .map((team) => {
+    const members = responders.filter((r) => r.teamId === team.id);
 
-  responders.forEach((r) => {
-    const teamName = teams.find((t) => t.id === r.teamId)?.teamName || "Unassigned";
+    if (members.length === 0) return null;
 
-    const vehicle = vehicles.find((v) => v.assignedTeam === teamName);
-    const vehicleCode = vehicle?.code || "Unassigned";
+    const vehicle =
+      vehicles.find((v) => v.assignedTeamId === team.id)?.code ||
+      vehicles.find((v) => v.assignedTeam === team.teamName)?.code ||
+      "Unassigned";
 
-    const key = `${teamName}___${vehicleCode}`;
-
-    if (!teamVehicleGroups[key]) {
-      teamVehicleGroups[key] = {
-        team: teamName,
-        vehicle: vehicleCode,
-        responders: [],
-      };
-    }
-
-    teamVehicleGroups[key].responders.push(r);
-  });
-
-  const groupedList = Object.values(teamVehicleGroups).map((group: any) => {
-    const statuses = group.responders.map((r: any) => r.status);
+    const statuses = members.map((m) => m.status);
 
     let status = "Unavailable";
     if (statuses.some((s) => s === "Available")) status = "Available";
     if (statuses.every((s) => s === "Dispatched")) status = "Dispatched";
 
-    return { ...group, status };
-  });
+    return {
+      team: team.teamName,
+      vehicle,
+      responders: members,
+      status,
+    };
+  })
+  .filter(Boolean);
+
 
   // ------------------------------------------------------------
   // STEP 1 → SELECT ALERT
@@ -370,13 +399,25 @@ const AlertDispatchModal = () => {
                       </span>
                     </td>
                     <td>
-                      <button
-                        className={styles.assignBtn}
-                        onClick={() => handleDispatchTeam(g)}
-                      >
-                        Dispatch Team
-                      </button>
-                    </td>
+  {g.status === "Available" && (
+    <button
+      className={styles.assignBtn}
+      onClick={() => handleDispatchTeam(g)}
+    >
+      Dispatch Team
+    </button>
+  )}
+
+  {g.status === "Dispatched" && (
+    <button
+      className={styles.viewBtn}
+      onClick={() => viewDispatchInfo(g.team)}
+    >
+      View
+    </button>
+  )}
+</td>
+
                   </tr>
                 ))}
               </tbody>
@@ -441,6 +482,53 @@ const AlertDispatchModal = () => {
         )}
 
       </div>
+      {showViewModal && selectedDispatch && (
+  <div className={styles.modalOverlay} onClick={() => setShowViewModal(false)}>
+    <div className={styles.modalWide} onClick={(e) => e.stopPropagation()}>
+      <h3 className={styles.modalTitle}>Dispatch Details</h3>
+
+      <p><strong>Alert Type:</strong> {selectedDispatch.alertType}</p>
+      <p><strong>Location:</strong> {selectedDispatch.alertLocation}</p>
+      <p><strong>Dispatched By:</strong> {selectedDispatch.dispatchedBy}</p>
+
+      <p>
+        <strong>Time:</strong>{" "}
+        {selectedDispatch.timestamp
+          ? new Date(
+              selectedDispatch.timestamp.seconds * 1000
+            ).toLocaleString()
+          : "—"}
+      </p>
+
+      <hr className={styles.separator} />
+
+      <h4>Reported By</h4>
+      <p><strong>Name:</strong> {selectedDispatch.userReported}</p>
+      <p><strong>Contact:</strong> {selectedDispatch.userContact}</p>
+      <p><strong>Email:</strong> {selectedDispatch.userEmail}</p>
+      <p><strong>Address:</strong> {selectedDispatch.userAddress}</p>
+
+      <hr className={styles.separator} />
+
+      <h4>Responders</h4>
+      <ul>
+        {selectedDispatch.responders?.map((r: any) => (
+          <li key={r.id}>
+            {r.name} — {r.team} ({r.vehicle})
+          </li>
+        ))}
+      </ul>
+
+      <button
+        className={styles.closeBtn}
+        onClick={() => setShowViewModal(false)}
+      >
+        Close
+      </button>
+    </div>
+  </div>
+)}
+
     </div>
   );
 };
