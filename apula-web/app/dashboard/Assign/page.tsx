@@ -73,7 +73,6 @@ export default function AssignPage() {
     teamList.some((t) => t.leaderId === id);
 
   const toggleResponder = (id: string) => {
-    // leaders cannot be reassigned
     if (isLeader(id)) return;
     setSelectedResponderIds((prev) => {
       const next = new Set(prev);
@@ -100,13 +99,17 @@ export default function AssignPage() {
     setTeamAssignments((prev) => ({ ...prev, [responderId]: teamId }));
   };
 
+  // ✅ CLOSE HANDLER (ONLY ADDITION)
+  const closeAssignModal = () => {
+    setShowAssignModal(false);
+  };
+
   // ---------------- SAVE ASSIGNMENTS ----------------
   const saveAssignments = async () => {
     if (selectedResponderIds.size === 0) {
       return alert("Select responders");
     }
 
-    // Only non-leaders are processed
     const selected = responders.filter(
       (r) => selectedResponderIds.has(r.id) && !isLeader(r.id)
     );
@@ -116,7 +119,6 @@ export default function AssignPage() {
       return;
     }
 
-    // Build mutable copies of team members so we can update them
     const teamMembersMap: Record<string, any[]> = {};
     const changedTeamIds = new Set<string>();
 
@@ -124,23 +126,12 @@ export default function AssignPage() {
       teamMembersMap[t.id] = (t.members || []).map((m: any) => ({ ...m }));
     });
 
-    // Collect user updates separately
-    const userUpdates: Record<
-      string,
-      {
-        teamId: string;
-        teamName: string;
-        vehicleId: string;
-        vehicleCode: string;
-        vehiclePlate: string;
-      }
-    > = {};
+    const userUpdates: Record<string, any> = {};
 
     selected.forEach((r) => {
       const oldTeamId: string = r.teamId || "";
       const newTeamId: string = teamAssignments[r.id] || "";
 
-      // Old and new team references
       const oldTeam = oldTeamId
         ? teamList.find((t) => t.id === oldTeamId)
         : null;
@@ -148,7 +139,6 @@ export default function AssignPage() {
         ? teamList.find((t) => t.id === newTeamId)
         : null;
 
-      // Remove from old team members
       if (oldTeam && teamMembersMap[oldTeam.id]) {
         teamMembersMap[oldTeam.id] = teamMembersMap[oldTeam.id].filter(
           (m) => m.id !== r.id
@@ -156,7 +146,6 @@ export default function AssignPage() {
         changedTeamIds.add(oldTeam.id);
       }
 
-      // Add to new team members
       if (newTeam) {
         const list = teamMembersMap[newTeam.id] || [];
         if (!list.some((m: any) => m.id === r.id)) {
@@ -171,7 +160,6 @@ export default function AssignPage() {
         changedTeamIds.add(newTeam.id);
       }
 
-      // Find vehicle for new team (if any)
       const vehicle = newTeam
         ? vehicleList.find((v) => v.assignedTeamId === newTeam.id)
         : null;
@@ -187,13 +175,11 @@ export default function AssignPage() {
 
     const batch = writeBatch(db);
 
-    // Apply team member updates (one write per team)
     changedTeamIds.forEach((teamId) => {
       const members = teamMembersMap[teamId] || [];
       batch.update(doc(db, "teams", teamId), { members });
     });
 
-    // Apply user updates
     Object.entries(userUpdates).forEach(([userId, fields]) => {
       batch.update(doc(db, "users", userId), fields);
     });
@@ -221,7 +207,7 @@ export default function AssignPage() {
           <h2 className={styles.pageTitle}>Team Assignment</h2>
 
           <div className={styles.searchWrapper}>
-            <FaSearch />
+  
             <input
               className={styles.searchInput}
               placeholder="Search responders..."
@@ -236,7 +222,6 @@ export default function AssignPage() {
             </button>
           </div>
 
-          {/* MAIN TABLE */}
           <table className={styles.userTable}>
             <thead>
               <tr>
@@ -250,14 +235,6 @@ export default function AssignPage() {
                 const leaderTeam = getLeaderTeam(r.id);
                 const leaderVehicle = getLeaderVehicle(leaderTeam?.id);
 
-                const displayTeam = leaderTeam
-                  ? leaderTeam.teamName
-                  : r.teamName || "Unassigned";
-
-                const displayVehicle = leaderVehicle
-                  ? leaderVehicle.code
-                  : r.vehicleCode || "Unassigned";
-
                 return (
                   <tr key={r.id}>
                     <td>
@@ -268,8 +245,8 @@ export default function AssignPage() {
                         </span>
                       )}
                     </td>
-                    <td>{displayTeam}</td>
-                    <td>{displayVehicle}</td>
+                    <td>{leaderTeam?.teamName || r.teamName || "Unassigned"}</td>
+                    <td>{leaderVehicle?.code || r.vehicleCode || "Unassigned"}</td>
                   </tr>
                 );
               })}
@@ -289,8 +266,8 @@ export default function AssignPage() {
                 type="checkbox"
                 checked={selectAll}
                 onChange={toggleSelectAll}
-              />
-              {" "}Select All (except leaders)
+              />{" "}
+              Select All (except leaders)
             </label>
 
             <table className={styles.responderTable}>
@@ -339,9 +316,15 @@ export default function AssignPage() {
               </tbody>
             </table>
 
-            <button className={styles.assignBtn} onClick={saveAssignments}>
-              Save Assignment
-            </button>
+            {/* ✅ SAVE + CLOSE */}
+            <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end" }}>
+              <button className={styles.closeBtn} onClick={closeAssignModal}>
+                Close
+              </button>
+              <button className={styles.assignBtn} onClick={saveAssignments}>
+                Save Assignment
+              </button>
+            </div>
           </div>
         </div>
       )}

@@ -195,76 +195,64 @@ export default function TeamVehiclePage() {
   // Open Edit Team modal
   // ------------------------------------------
   const openEditTeam = (team: any) => {
-    setEditingTeam({
-      id: team.id,
-      teamName: team.teamName || "",
-      leaderId: team.leaderId || team.leader || "",
-      status: normalizeStatus(team.status || "Available"),
-    });
-    setShowAddTeamModal(false);
-  };
+  setEditingTeam({
+    ...team,
+    status: normalizeStatus(team.status || "Available"),
+  });
+};
+
+
+
+
 
   // Save edited team
-  const saveEditTeam = async () => {
+ const saveEditTeam = async () => {
   if (!editingTeam) return;
 
   try {
     const teamRef = doc(db, "teams", editingTeam.id);
-   // ✅ Sync vehicle to team leader + members
-const team = teams.find(t => t.id === editingVehicle.assignedTeamId);
-if (team) {
-  const batch = writeBatch(db);
 
-  team.members.forEach((m: any) => {
-    batch.update(doc(db, "users", m.id), {
-      vehicleId: editingVehicle.id,
-      vehicleCode: editingVehicle.code,
-      vehiclePlate: editingVehicle.plate,
-    });
-  });
-
-  await batch.commit();
-}
-
-
-    const oldLeaderId = team.leaderId;
+    const oldLeaderId = editingTeam.leaderId;
     const newLeaderId = editingTeam.leaderId;
 
     const batch = writeBatch(db);
 
-    // Remove old leader from members
-    let updatedMembers = (team.members || []).filter(
-      (m: any) => m.id !== oldLeaderId
+    let updatedMembers = (editingTeam.members || []).filter(
+      (m: any) => m.id === newLeaderId
     );
 
-    // Add new leader
     const newLeader = responders.find(r => r.id === newLeaderId);
     if (newLeader) {
-      updatedMembers.push({
-        id: newLeader.id,
-        name: newLeader.name,
-        status: newLeader.status || "Available",
-        teamName: editingTeam.teamName,
-      });
+      updatedMembers = [
+        {
+          id: newLeader.id,
+          name: newLeader.name,
+          status: newLeader.status || "Available",
+          teamName: editingTeam.teamName,
+        },
+      ];
 
       batch.update(doc(db, "users", newLeader.id), {
-        teamId: team.id,
+        teamId: editingTeam.id,
         teamName: editingTeam.teamName,
       });
     }
 
-    // Clear old leader
-    if (oldLeaderId) {
-      batch.update(doc(db, "users", oldLeaderId), {
-        teamId: "",
-        teamName: "",
-        vehicleId: "",
-        vehicleCode: "",
-        vehiclePlate: "",
-      });
-    }
+    // Clear users no longer in team
+    const q = query(
+      collection(db, "users"),
+      where("teamId", "==", editingTeam.id)
+    );
+    const snap = await getDocs(q);
+    snap.docs.forEach(d => {
+      if (d.id !== newLeaderId) {
+        batch.update(doc(db, "users", d.id), {
+          teamId: "",
+          teamName: "",
+        });
+      }
+    });
 
-    // Update team
     batch.update(teamRef, {
       teamName: editingTeam.teamName,
       leaderId: newLeaderId,
@@ -280,6 +268,8 @@ if (team) {
     alert("Error updating team");
   }
 };
+
+
 
   // Delete team
   const deleteTeam = async (teamId: string) => {

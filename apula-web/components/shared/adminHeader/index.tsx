@@ -14,6 +14,7 @@ import {
   LogOut,
   Send,
   ClipboardList,
+  CarFront, Car,
 } from "lucide-react";
 
 import { auth, db } from "@/lib/firebase";
@@ -170,16 +171,16 @@ export default function AdminHeader() {
             <span>Request</span>
           </a>
 
-                <a
+<a
   href="/dashboard/Management"
   className={`${styles.sidebarLink} ${
     isActive("/dashboard/Management") ? styles.activeLink : ""
   }`}
 >
-  <ClipboardList size={18} className={styles.icon} />
-<span>Team and Vehicle</span>
-
+  <Car size={18} className={styles.icon} />
+  <span>Fleet & Teams</span>
 </a>
+
 
           <a
   href="/dashboard/Assign"
@@ -192,7 +193,7 @@ export default function AdminHeader() {
 
 </a>
 
-          <a
+          {<a
             href="/dashboard/dispatch"
             className={`${styles.sidebarLink} ${
               isActive("/dashboard/dispatch") ? styles.activeLink : ""
@@ -200,7 +201,7 @@ export default function AdminHeader() {
           >
             <Send size={18} className={styles.icon} />
             <span>Dispatch</span>
-          </a>
+          </a>/* DISPATCHER ONLY */}
 
           <a
             href="/dashboard/reports"
