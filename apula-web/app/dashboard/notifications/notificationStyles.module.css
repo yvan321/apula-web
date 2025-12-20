@@ -126,6 +126,34 @@
   color: #1b5e20;
 }
 
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 14px;
+  margin-top: 24px;
+}
+
+.pageBtn {
+  padding: 8px 18px;
+  border-radius: 8px;
+  border: none;
+  background-color: #a30000;
+  color: #ffffff;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.pageBtn:hover {
+  background-color: #7f0000;
+}
+
+.pageBtn:disabled {
+  background-color: #cccccc;
+  cursor: not-allowed;
+}
+
 /* ---------- UNREAD DOT ---------- */
 .unreadDot {
   display: inline-block;

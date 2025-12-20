@@ -2,103 +2,129 @@
   --card-radius: 14px;
 }
 
-/* MAIN CONTAINER */
+/* ================= MAIN LAYOUT ================= */
+
 .container {
   padding: 24px;
   background-color: #d9d9d9;
   min-height: 100vh;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
 }
 
 .contentSection {
-  background-color: white;
+  background-color: #ffffff;
   padding: 24px;
   border-radius: var(--card-radius);
   box-shadow: 0 1px 3px rgba(0,0,0,0.08);
 }
 
 .pageTitle {
-  color: var(--color-red);
+  color: #a30000;
   font-size: 24px;
   font-weight: 700;
   margin: 0;
 }
 
 .separator {
-  margin-top: 0.5rem;
-  margin-bottom: 1.5rem;
+  margin: 0.5rem 0 1.5rem;
   border: 0;
   border-top: 1px solid #ccc;
 }
 
-/* HEADER ROW */
-.headerRow {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-wrap: wrap;
-}
+/* ================= CARD ROWS ================= */
 
-/* ---------- TOP ROW (Time, Temp, Analytics) ---------- */
-.topRow {
+.row {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 20px;
   margin-bottom: 25px;
   align-items: stretch;
 }
 
-.topCard {
-  height: 160px;
-  padding: 30px;
-  border-radius: var(--card-radius);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  text-align: center;
-  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-  overflow: hidden;
-}
+/* ================= BASE CARD ================= */
 
-/* ---------- TIME CARD ---------- */
-.cardTime {
-  background: linear-gradient(135deg, #f3ae2f, #e47119);
-  padding-top: 20px;
-  color: white;
+.card,
+.cardCritical,
+.cardSuccess,
+.cardInfo {
+  border-radius: var(--card-radius);
+  padding: 22px;
+  min-height: 120px;
   display: flex;
   flex-direction: column;
   justify-content: center;
+  text-align: center;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.12);
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+.card:hover,
+.cardCritical:hover,
+.cardSuccess:hover,
+.cardInfo:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 24px rgba(0,0,0,0.18);
+}
+
+/* ================= ICON + NUMBER LAYOUT ================= */
+
+.cardTop {
+  display: flex;
   align-items: center;
+  justify-content: center;
   gap: 10px;
-  border-radius: var(--card-radius);
+  margin-bottom: 6px;
 }
 
-.timeIcon {
-  font-size: 55px;
-  opacity: 0.9;
+.cardIcon {
+  font-size: 30px;
+  opacity: 0.95;
 }
 
-.timeText {
-  font-size: 32px;
+.cardLabel {
+  font-size: 14px;
+  font-weight: 600;
+  opacity: 0.95;
+}
+
+/* ================= TEXT ================= */
+
+.bigText {
+  font-size: 26px;
   font-weight: 700;
 }
 
-.dateText {
-  font-size: 15px;
-  opacity: 0.9;
+.bigNumber {
+  font-size: 34px;
+  font-weight: 800;
 }
 
-/* ---------- TEMPERATURE CARD ---------- */
-.cardTemperature {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  padding: 30px;
-  border-radius: var(--card-radius);
-  color: white;
+/* ================= COLORWAY (FROM FIRST CARDS) ================= */
+
+/* Blue – weather / neutral */
+.card {
+  background: linear-gradient(135deg, #01558e, #85c1e9);
+  color: #ffffff;
 }
 
+/* Orange – time / info */
+.cardInfo {
+  background: linear-gradient(135deg, #f3ae2f, #e47119);
+  color: #ffffff;
+}
+
+/* Red – critical fire */
+.cardCritical {
+  background: linear-gradient(135deg, #e47119, #cc0000);
+  color: #ffffff;
+}
+
+/* Green – available / responders */
+.cardSuccess {
+  background: linear-gradient(135deg, #219350, #27ae60);
+  color: #ffffff;
+}
+
+/* Weather override */
 .hotTemp {
   background: linear-gradient(135deg, #ff8c00, #ff4500);
 }
@@ -107,296 +133,138 @@
   background: linear-gradient(135deg, #01558e, #85c1e9);
 }
 
-.tempValue {
-  font-size: 36px;
-  font-weight: 700;
-}
+/* ================= ANALYTICS CARD ================= */
 
-.tempStatus {
-  font-size: 14px;
-  margin-top: 5px;
-  opacity: 0.9;
-}
 
-/* ---------- SUMMARY ROW ---------- */
-.summaryRow {
-  display: flex;
-  gap: 20px;
-  flex-wrap: wrap;
-}
-
-.summaryCard {
-  flex: 1 1 300px;
+.analyticsCard {
+  grid-column: 1 / -1;  
+  width: 96%;
   border-radius: var(--card-radius);
-  padding: 24px;
-  text-align: center;
-  position: relative;
-  overflow: hidden;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
-  transition: color 0.4s ease;
-}
-
-.summaryCard::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 100%;
-  height: 100%;
-  transition: all 0.5s ease;
-  z-index: 0;
-}
-
-.summaryCard * {
-  position: relative;
-  z-index: 2;
-}
-
-/* Colors */
-.usersCard {
-  background: #fff3e0;
-  color: #e65100;
-}
-
-.respondersCard {
-  background: #e8f5e9;
-  color: #1b5e20;
-}
-
-.callsCard {
-  background: #f3e5f5;
-  color: #6a1b9a;
-}
-
-/* Hover gradients */
-.usersCard::before {
-  background: linear-gradient(135deg, #ffb347, #ff9800);
-}
-
-.respondersCard::before {
+  padding: 26px;
   background: linear-gradient(135deg, #2ecc71, #27ae60);
-}
-
-.callsCard::before {
-  background: linear-gradient(135deg, #9b59b6, #8e44ad);
-}
-
-.summaryCard:hover::before {
-  left: 0;
-}
-
-.summaryCard:hover {
-  color: white;
-}
-
-/* Summary text */
-.summaryCard h4 {
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
   font-size: 18px;
-  font-weight: 600;
-}
-
-.summaryValue {
-  font-size: 28px;
   font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 8px 24px rgba(39,174,96,0.45);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
 
-/* ---------- ANALYTICS CARD (GREEN THEME) ---------- */
-.monthlyCard {
-  background: #f0fdf4; /* light green background */
-  color: #1b5e20;      /* dark green text */
-  border-radius: var(--card-radius);
-  padding: 22px;
-  transition: 0.3s;
-  position: relative;
-}
 
-/* Hover sliding gradient */
-.monthlyCard::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 100%;
-  height: 100%;
-  z-index: -1;
-  transition: 0.4s ease;
-  background: linear-gradient(135deg, #43a047, #2e7d32); /* GREEN GRADIENT */
-}
 
-/* Hover effect */
-.monthlyCard:hover::before {
-  left: 0;
-}
-
-.monthlyCard:hover {
-  color: white;
+.analyticsCard:hover {
   transform: translateY(-3px);
+  box-shadow: 0 14px 32px rgba(39,174,96,0.65);
 }
 
-.analyticsTitle {
-  font-size: 1.3rem;
-  font-weight: 700;
-}
+/* ================= MODAL ================= */
 
-.analyticsIcon {
-  font-size: 2.6rem;
-  color: #1b5e20; /* or your green/red theme */
-  transition: 0.3s;
-}
-
-.monthlyCard:hover .analyticsIcon {
-  color: white;
-  transform: translateY(-3px);
-}
-
-
-/* ----------- MODERN OVERLAY (Glass Blur) ----------- */
 .modalOverlay {
   position: fixed;
   inset: 0;
   backdrop-filter: blur(6px);
-  background: rgba(0, 0, 0, 0.45);
+  background: rgba(0,0,0,0.45);
   display: flex;
   justify-content: center;
   align-items: center;
-  z-index: 99999;
-  animation: fadeIn 0.2s ease-out;
+  z-index: 9999;
+  padding: 16px; /* ✅ prevents edge clipping on mobile */
 }
 
-/* ----------- MODERN POPUP BOX ----------- */
 .modalBox {
-  width: 650px;
-  max-width: 90%;
-  background: rgba(255, 255, 255, 0.95);
+  width: 100%;
+  max-width: 650px;
+  max-height: 90vh;               /* ✅ critical for mobile */
+  background: rgba(255,255,255,0.95);
   border-radius: 18px;
-  padding: 28px 30px;
-  box-shadow: 0 12px 35px rgba(0, 0, 0, 0.25);
-  backdrop-filter: blur(20px);
-  animation: slideUp 0.25s ease-out;
-  border: 1px solid rgba(255, 255, 255, 0.6);
-  position: relative;
+  padding: 24px;
+  box-shadow: 0 12px 35px rgba(0,0,0,0.25);
+  overflow-y: auto;               /* ✅ internal scrolling */
+  -webkit-overflow-scrolling: touch;
 }
 
-/* ----------- TITLE ----------- */
+/* Sticky title (optional but recommended) */
 .modalTitle {
-  font-size: 1.6rem;
+  font-size: 1.4rem;
   font-weight: 700;
-  color: #A30000;
-  margin: 0;
+  color: #a30000;
   text-align: center;
-  padding-bottom: 15px;
+  margin-bottom: 15px;
   border-bottom: 1px solid #e0e0e0;
+  padding-bottom: 10px;
+  position: sticky;
+  top: 0;
+  background: rgba(255,255,255,0.95);
+  z-index: 2;
 }
 
-/* ----------- SELECTORS ----------- */
-.selectorRow {
-  margin-top: 20px;
-  display: flex;
-  justify-content: center;
-  gap: 18px;
-}
-
-.selector {
-  padding: 10px 14px;
-  background: #ffffff;
-  border-radius: 10px;
-  border: 2px solid #43a047;
-  color: #2e7d32;
-  font-weight: 600;
-  font-size: 14px;
-  transition: 0.25s;
-}
-
-.selector:hover {
-  border-color: #66bb6a;
-  background: #f1fff4;
-}
-
-/* ----------- CHART AREA ----------- */
+/* Chart area scales properly */
 .chartContainer {
   width: 100%;
-  height: 320px;
-  margin-top: 25px;
-  background: #ffffff !important;
+  height: 300px;
+  margin-top: 16px;
+  background: #ffffff;
   border-radius: 14px;
   border: 1px solid #c8e6c9;
   padding: 10px;
-  box-shadow: inset 0 0 12px rgba(0,0,0,0.05);
 }
 
-/* ----------- CLOSE BUTTON (SLIDING RED) ----------- */
+/* ================= BUTTON ================= */
+
 .closeBtn {
-  margin-top: 25px;
-  background: #A30000;
+  margin-top: 20px;
+  background: #a30000;
   color: white;
-  padding: 13px;
+  padding: 14px;
   border-radius: 12px;
   width: 100%;
   font-size: 15px;
   font-weight: 600;
   border: none;
   cursor: pointer;
-  transition: 0.35s ease;
-  position: relative;
-  overflow: hidden;
-}
-
-/* sliding effect */
-.closeBtn::after {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 100%;
-  height: 100%;
-  background: #CC0000; /* lighter red on hover */
-  transition: 0.35s ease;
-  border-radius: 12px;
-}
-
-.closeBtn span {
-  position: relative;
-  z-index: 2;
-}
-
-.closeBtn:hover::after {
-  left: 0;
 }
 
 .closeBtn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 20px rgba(163, 0, 0, 0.4);
-  color: #ffffff;
+  background: #cc0000;
 }
 
-/* ----------- ANIMATIONS ----------- */
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+
+/* ================= RESPONSIVE ================= */
+
+@media (max-width: 1100px) {
+  .row {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
 
-@keyframes slideUp {
-  from { opacity: 0; transform: translateY(30px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-/* ---------- RESPONSIVE ---------- */
-@media (max-width: 768px) {
-
-  .topRow {
+@media (max-width: 600px) {
+  .row {
     grid-template-columns: 1fr;
   }
 
-  .topCard {
-    height: auto;
-    padding: 25px;
+  .analyticsCard {
+    width: 80%;
   }
 
-  .summaryRow {
-    flex-direction: column;
+  .modalBox {
+    max-height: 92vh;
+    border-radius: 16px 16px 0 0;
+    padding: 20px;
   }
 
-  .timeIcon {
-    display: none;
+  .chartContainer {
+    height: 240px; /* smaller chart for phones */
+  }
+
+  .bigNumber {
+    font-size: 28px;
+  }
+
+  .bigText {
+    font-size: 22px;
   }
 }

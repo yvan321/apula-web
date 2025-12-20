@@ -3,7 +3,17 @@
 import React, { useState, useEffect } from "react";
 import AdminHeader from "@/components/shared/adminHeader";
 import styles from "./adminDashboardStyles.module.css";
-import { FaRegClock, FaChartLine } from "react-icons/fa";
+
+import {
+  FaRegClock,
+  FaChartLine,
+  FaFire,
+  FaUsers,
+  FaTruck,
+  FaUserCheck,
+  FaUserClock,
+  FaCloudSun,
+} from "react-icons/fa";
 
 import { db } from "@/lib/firebase";
 import { collection, onSnapshot, query, where } from "firebase/firestore";
@@ -24,19 +34,20 @@ import {
 const AdminDashboard = () => {
   const [time, setTime] = useState("");
   const [date, setDate] = useState("");
-
-  const [userCount, setUserCount] = useState(0);
-  const [activeAlertCount, setActiveAlertCount] = useState(0);
-  const [resolvedCount, setResolvedCount] = useState(0);
-
   const [temperature] = useState(31);
 
-  const [monthData, setMonthData] = useState([]);
+  const [activeAlertCount, setActiveAlertCount] = useState(0);
+  const [availableResponders, setAvailableResponders] = useState(0);
+  const [dispatchedResponders, setDispatchedResponders] = useState(0);
+  const [availableTrucks, setAvailableTrucks] = useState(0);
+  const [availableTeams, setAvailableTeams] = useState(0);
+
+  const [monthData, setMonthData] = useState<any[]>([]);
   const [showMonthlyModal, setShowMonthlyModal] = useState(false);
 
   const tempClass = temperature >= 32 ? styles.hotTemp : styles.coolTemp;
 
-  /* ---------------------- TIME & DATE ---------------------- */
+  /* ================= TIME & DATE ================= */
   useEffect(() => {
     const updateTime = () => {
       const now = new Date();
@@ -62,74 +73,85 @@ const AdminDashboard = () => {
     return () => clearInterval(timer);
   }, []);
 
-  /* ---------------------- USERS ---------------------- */
-  useEffect(() => {
-    const unsub = onSnapshot(collection(db, "users"), (snap) =>
-      setUserCount(snap.size)
-    );
-    return () => unsub();
-  }, []);
-
-  /* ---------------------- ACTIVE ALERTS ---------------------- */
+  /* ================= ACTIVE FIRES ================= */
   useEffect(() => {
     const q = query(
       collection(db, "alerts"),
       where("status", "!=", "Resolved")
     );
-    const unsub = onSnapshot(q, (snap) => setActiveAlertCount(snap.size));
-    return () => unsub();
-  }, []);
 
-  /* ---------------------- RESOLVED ALERTS ---------------------- */
-  useEffect(() => {
-    const q = query(
-      collection(db, "alerts"),
-      where("status", "==", "Resolved")
-    );
-    const unsub = onSnapshot(q, (snap) => setResolvedCount(snap.size));
-    return () => unsub();
-  }, []);
-
- /* ---------------------- ALL ALERTS (FULL YEAR GRAPH) ---------------------- */
-useEffect(() => {
-  const unsub = onSnapshot(collection(db, "alerts"), (snapshot) => {
-    const monthly = Array(12).fill(0);
-
-    snapshot.forEach((doc) => {
-      const data = doc.data();
-      if (!data.timestamp) return;
-
-      let date: Date | null = null;
-
-      // Case 1: Firestore Timestamp (new alerts)
-      if (data.timestamp?.seconds) {
-        date = new Date(data.timestamp.seconds * 1000);
-      }
-
-      // Case 2: String timestamp (old alerts)
-      else if (typeof data.timestamp === "string") {
-        date = new Date(data.timestamp);
-      }
-
-      // Still invalid → skip
-      if (!date || isNaN(date.getTime())) return;
-
-      const m = date.getMonth(); // 0–11
-      monthly[m] += 1;
+    const unsub = onSnapshot(q, (snap) => {
+      setActiveAlertCount(snap.size);
     });
 
-    setMonthData(
-      monthly.map((count, index) => ({
-        month: ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][index],
-        alerts: count,
-      }))
-    );
-  });
+    return () => unsub();
+  }, []);
 
-  return () => unsub();
-}, []);
+  /* ================= RESPONDERS ================= */
+  useEffect(() => {
+    const unsub = onSnapshot(collection(db, "responders"), (snap) => {
+      let available = 0;
+      let dispatched = 0;
+      let trucks = 0;
+      let teams = 0;
 
+      snap.forEach((doc) => {
+        const d = doc.data();
 
+        if (d.status === "AVAILABLE") {
+          available++;
+          if (d.type === "Truck") trucks++;
+          if (d.type === "Team") teams++;
+        }
+
+        if (d.status === "DISPATCHED") {
+          dispatched++;
+        }
+      });
+
+      setAvailableResponders(available);
+      setDispatchedResponders(dispatched);
+      setAvailableTrucks(trucks);
+      setAvailableTeams(teams);
+    });
+
+    return () => unsub();
+  }, []);
+
+  /* ================= ANALYTICS ================= */
+  useEffect(() => {
+    const unsub = onSnapshot(collection(db, "alerts"), (snapshot) => {
+      const monthly = Array(12).fill(0);
+
+      snapshot.forEach((doc) => {
+        const data = doc.data();
+        if (!data.timestamp) return;
+
+        let d: Date | null = null;
+
+        if (data.timestamp?.seconds) {
+          d = new Date(data.timestamp.seconds * 1000);
+        } else if (typeof data.timestamp === "string") {
+          d = new Date(data.timestamp);
+        }
+
+        if (!d || isNaN(d.getTime())) return;
+        monthly[d.getMonth()] += 1;
+      });
+
+      setMonthData(
+        monthly.map((count, index) => ({
+          month: [
+            "Jan","Feb","Mar","Apr","May","Jun",
+            "Jul","Aug","Sep","Oct","Nov","Dec",
+          ][index],
+          alerts: count,
+        }))
+      );
+    });
+
+    return () => unsub();
+  }, []);
 
   return (
     <div>
@@ -138,97 +160,110 @@ useEffect(() => {
       <div style={{ position: "absolute", top: 20, right: 30, zIndex: 50 }}>
         <AlertBellButton />
       </div>
+
       <AlertDispatchModal />
 
       <div className={styles.container}>
         <div className={styles.contentSection}>
-          <h2 className={styles.pageTitle}>Admin Dashboard</h2>
+          <h2 className={styles.pageTitle}>Fire Command Center</h2>
           <hr className={styles.separator} />
 
-          {/* ---------------- TOP ROW ---------------- */}
-          <div className={styles.topRow}>
-            {/* TIME */}
-            <div className={`${styles.topCard} ${styles.cardTime}`}>
-              <FaRegClock className={styles.timeIcon} />
-              <p className={styles.timeText}>{time}</p>
-              <p className={styles.dateText}>{date}</p>
-            </div>
-
-            {/* TEMP */}
-            <div
-              className={`${styles.topCard} ${styles.cardTemperature} ${tempClass}`}
-            >
-              <h3 className={styles.tempValue}>{temperature}°C</h3>
-              <p className={styles.tempStatus}>
-                {temperature >= 32 ? "Hot" : "Cool"} Weather in Bacoor City
-              </p>
-            </div>
-
-            {/* ANALYTICS */}
-            <div
-              className={`${styles.topCard} ${styles.monthlyCard}`}
-              style={{
-                cursor: "pointer",
-                display: "flex",
-                flexDirection: "column", 
-                justifyContent: "center",
-                alignItems: "center",
-                textAlign: "center",
-                gap: "0px",
-              }}
-              onClick={() => setShowMonthlyModal(true)}
-            >
-              <FaChartLine className={styles.analyticsIcon} />
-
-              <div>
-                <h4 className={styles.analyticsTitle}>ANALYTICS</h4>
-                <p className={styles.summaryLabel}>Fire Alerts (Yearly)</p>
+          {/* ================= ROW 1 ================= */}
+          <div className={styles.row}>
+            <div className={styles.cardInfo}>
+              <div className={styles.cardTop}>
+                <FaRegClock className={styles.cardIcon} />
+                <p className={styles.bigText}>{time}</p>
               </div>
+              <span className={styles.cardLabel}>{date}</span>
+            </div>
+
+            <div className={`${styles.card} ${tempClass}`}>
+              <div className={styles.cardTop}>
+                <FaCloudSun className={styles.cardIcon} />
+                <p className={styles.bigText}>{temperature}°C</p>
+              </div>
+              <span className={styles.cardLabel}>Weather</span>
+            </div>
+
+            <div className={styles.cardCritical}>
+              <div className={styles.cardTop}>
+                <FaFire className={styles.cardIcon} />
+                <p className={styles.bigNumber}>{activeAlertCount}</p>
+              </div>
+              <span className={styles.cardLabel}>Active Fire Incidents</span>
+            </div>
+
+            <div className={styles.cardSuccess}>
+              <div className={styles.cardTop}>
+                <FaUsers className={styles.cardIcon} />
+                <p className={styles.bigNumber}>{availableTeams}</p>
+              </div>
+              <span className={styles.cardLabel}>Available Teams</span>
             </div>
           </div>
 
-          {/* ---------------- SUMMARY ROW ---------------- */}
-          <div className={styles.summaryRow}>
-            <div className={`${styles.summaryCard} ${styles.usersCard}`}>
-              <h4>Registered Users</h4>
-              <p className={styles.summaryValue}>{userCount}</p>
-              <p className={styles.summaryLabel}>App users & responders</p>
+          {/* ================= ROW 2 ================= */}
+          <div className={styles.row}>
+            <div className={styles.cardSuccess}>
+              <div className={styles.cardTop}>
+                <FaUserCheck className={styles.cardIcon} />
+                <p className={styles.bigNumber}>{availableResponders}</p>
+              </div>
+              <span className={styles.cardLabel}>Responders Available</span>
             </div>
 
-            <div className={`${styles.summaryCard} ${styles.respondersCard}`}>
-              <h4>Active Alerts</h4>
-              <p className={styles.summaryValue}>{activeAlertCount}</p>
-              <p className={styles.summaryLabel}>Not yet resolved</p>
+            <div className={styles.cardInfo}>
+              <div className={styles.cardTop}>
+                <FaUserClock className={styles.cardIcon} />
+                <p className={styles.bigNumber}>{dispatchedResponders}</p>
+              </div>
+              <span className={styles.cardLabel}>Dispatched Responders</span>
             </div>
 
-            <div className={`${styles.summaryCard} ${styles.callsCard}`}>
-              <h4>Resolved Incidents</h4>
-              <p className={styles.summaryValue}>{resolvedCount}</p>
-              <p className={styles.summaryLabel}>Verified responses</p>
+            <div className={styles.card}>
+              <div className={styles.cardTop}>
+                <FaTruck className={styles.cardIcon} />
+                <p className={styles.bigNumber}>{availableTrucks}</p>
+              </div>
+              <span className={styles.cardLabel}>Available Trucks</span>
+            </div>
+
+            <div className={styles.cardSuccess}>
+              <div className={styles.cardTop}>
+                <FaUsers className={styles.cardIcon} />
+                <p className={styles.bigNumber}>{availableTeams}</p>
+              </div>
+              <span className={styles.cardLabel}>Available Teams</span>
+            </div>
+          </div>
+
+          {/* ================= ROW 3 (ANALYTICS) ================= */}
+            <div
+              className={styles.analyticsCard}
+              onClick={() => setShowMonthlyModal(true)}
+            >
+              <FaChartLine />
+              <span>Fire Alerts Analytics (Yearly)</span>
             </div>
           </div>
         </div>
-      </div>
 
-      {/* ---------------- MODERN POPUP ---------------- */}
+
+      {/* ================= MODAL ================= */}
       {showMonthlyModal && (
         <div className={styles.modalOverlay}>
           <div className={styles.modalBox}>
             <h2 className={styles.modalTitle}>Yearly Fire Alerts Overview</h2>
 
-            {/* CHART */}
             <div className={styles.chartContainer}>
               <ResponsiveContainer>
                 <BarChart data={monthData}>
                   <CartesianGrid stroke="#eeeeee" strokeDasharray="3 3" />
-                  <XAxis dataKey="month" angle={-30} textAnchor="end" />
+                  <XAxis dataKey="month" />
                   <YAxis />
                   <Tooltip />
-                  <Bar
-                    dataKey="alerts"
-                    fill="#2e7d32"
-                    radius={[10, 10, 0, 0]}
-                  />
+                  <Bar dataKey="alerts" fill="#2e7d32" />
                 </BarChart>
               </ResponsiveContainer>
             </div>

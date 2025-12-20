@@ -444,7 +444,7 @@ const latest = snap.docs
               <tr>
                 <th>Team</th>
                 <th>Vehicle</th>
-                <th>Assigned</th>
+                <th>Members</th>
                 <th>Status</th>
                 <th>Action</th>
               </tr>

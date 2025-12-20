@@ -183,7 +183,7 @@ const NotificationPage: React.FC = () => {
             className={styles.modalContent}
             onClick={(e) => e.stopPropagation()}
           >
-            <h3>🔥 Fire Alert Details</h3>
+            <h3>Fire Alert Details</h3>
 
             <p>
               <strong>Location:</strong> {selectedNotif.location || "N/A"}
