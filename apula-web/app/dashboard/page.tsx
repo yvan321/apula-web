@@ -73,7 +73,7 @@ const AdminDashboard = () => {
     return () => clearInterval(timer);
   }, []);
 
-  /* ================= ACTIVE FIRES ================= */
+  /* ================= ACTIVE FIRE ALERTS ================= */
   useEffect(() => {
     const q = query(
       collection(db, "alerts"),
@@ -87,38 +87,65 @@ const AdminDashboard = () => {
     return () => unsub();
   }, []);
 
-  /* ================= RESPONDERS ================= */
+  /* ================= RESPONDERS (FROM USERS) ================= */
   useEffect(() => {
-    const unsub = onSnapshot(collection(db, "responders"), (snap) => {
+    const unsub = onSnapshot(collection(db, "users"), (snap) => {
       let available = 0;
       let dispatched = 0;
-      let trucks = 0;
-      let teams = 0;
 
       snap.forEach((doc) => {
         const d = doc.data();
 
-        if (d.status === "AVAILABLE") {
-          available++;
-          if (d.type === "Truck") trucks++;
-          if (d.type === "Team") teams++;
-        }
-
-        if (d.status === "DISPATCHED") {
-          dispatched++;
+        if (d.role === "responder") {
+          if (d.status === "Available") available++;
+          if (d.status === "Dispatched") dispatched++;
         }
       });
 
       setAvailableResponders(available);
       setDispatchedResponders(dispatched);
-      setAvailableTrucks(trucks);
+    });
+
+    return () => unsub();
+  }, []);
+
+  /* ================= AVAILABLE TEAMS ================= */
+  useEffect(() => {
+    const unsub = onSnapshot(collection(db, "teams"), (snap) => {
+      let teams = 0;
+
+      snap.forEach((doc) => {
+        const d = doc.data();
+        if (d.status === "Available") {
+          teams++;
+        }
+      });
+
       setAvailableTeams(teams);
     });
 
     return () => unsub();
   }, []);
 
-  /* ================= ANALYTICS ================= */
+  /* ================= AVAILABLE TRUCKS ================= */
+  useEffect(() => {
+    const unsub = onSnapshot(collection(db, "vehicles"), (snap) => {
+      let trucks = 0;
+
+      snap.forEach((doc) => {
+        const d = doc.data();
+        if (d.status === "Available") {
+          trucks++;
+        }
+      });
+
+      setAvailableTrucks(trucks);
+    });
+
+    return () => unsub();
+  }, []);
+
+  /* ================= YEARLY ANALYTICS ================= */
   useEffect(() => {
     const unsub = onSnapshot(collection(db, "alerts"), (snapshot) => {
       const monthly = Array(12).fill(0);
@@ -136,6 +163,7 @@ const AdminDashboard = () => {
         }
 
         if (!d || isNaN(d.getTime())) return;
+
         monthly[d.getMonth()] += 1;
       });
 
@@ -168,7 +196,7 @@ const AdminDashboard = () => {
           <h2 className={styles.pageTitle}>Fire Command Center</h2>
           <hr className={styles.separator} />
 
-          {/* ================= ROW 1 ================= */}
+          {/* ROW 1 */}
           <div className={styles.row}>
             <div className={styles.cardInfo}>
               <div className={styles.cardTop}>
@@ -203,7 +231,7 @@ const AdminDashboard = () => {
             </div>
           </div>
 
-          {/* ================= ROW 2 ================= */}
+          {/* ROW 2 */}
           <div className={styles.row}>
             <div className={styles.cardSuccess}>
               <div className={styles.cardTop}>
@@ -228,36 +256,27 @@ const AdminDashboard = () => {
               </div>
               <span className={styles.cardLabel}>Available Trucks</span>
             </div>
-
-            <div className={styles.cardSuccess}>
-              <div className={styles.cardTop}>
-                <FaUsers className={styles.cardIcon} />
-                <p className={styles.bigNumber}>{availableTeams}</p>
-              </div>
-              <span className={styles.cardLabel}>Available Teams</span>
-            </div>
           </div>
 
-          {/* ================= ROW 3 (ANALYTICS) ================= */}
-            <div
-              className={styles.analyticsCard}
-              onClick={() => setShowMonthlyModal(true)}
-            >
-              <FaChartLine />
-              <span>Fire Alerts Analytics (Yearly)</span>
-            </div>
+          {/* ANALYTICS CARD */}
+          <div
+            className={styles.analyticsCard}
+            onClick={() => setShowMonthlyModal(true)}
+          >
+            <FaChartLine />
+            <span>Fire Alerts Analytics (Yearly)</span>
           </div>
         </div>
+      </div>
 
-
-      {/* ================= MODAL ================= */}
+      {/* MODAL */}
       {showMonthlyModal && (
         <div className={styles.modalOverlay}>
           <div className={styles.modalBox}>
             <h2 className={styles.modalTitle}>Yearly Fire Alerts Overview</h2>
 
             <div className={styles.chartContainer}>
-              <ResponsiveContainer>
+              <ResponsiveContainer width="100%" height={300}>
                 <BarChart data={monthData}>
                   <CartesianGrid stroke="#eeeeee" strokeDasharray="3 3" />
                   <XAxis dataKey="month" />
@@ -272,7 +291,7 @@ const AdminDashboard = () => {
               className={styles.closeBtn}
               onClick={() => setShowMonthlyModal(false)}
             >
-              <span>Close</span>
+              Close
             </button>
           </div>
         </div>
