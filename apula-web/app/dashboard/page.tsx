@@ -5,14 +5,12 @@ import AdminHeader from "@/components/shared/adminHeader";
 import styles from "./adminDashboardStyles.module.css";
 
 import {
-  FaRegClock,
   FaChartLine,
   FaFire,
   FaUsers,
   FaTruck,
   FaUserCheck,
   FaUserClock,
-  FaCloudSun,
 } from "react-icons/fa";
 
 import { db } from "@/lib/firebase";
@@ -32,10 +30,6 @@ import {
 } from "recharts";
 
 const AdminDashboard = () => {
-  const [time, setTime] = useState("");
-  const [date, setDate] = useState("");
-  const [temperature] = useState(31);
-
   const [activeAlertCount, setActiveAlertCount] = useState(0);
   const [availableResponders, setAvailableResponders] = useState(0);
   const [dispatchedResponders, setDispatchedResponders] = useState(0);
@@ -44,34 +38,6 @@ const AdminDashboard = () => {
 
   const [monthData, setMonthData] = useState<any[]>([]);
   const [showMonthlyModal, setShowMonthlyModal] = useState(false);
-
-  const tempClass = temperature >= 32 ? styles.hotTemp : styles.coolTemp;
-
-  /* ================= TIME & DATE ================= */
-  useEffect(() => {
-    const updateTime = () => {
-      const now = new Date();
-      setTime(
-        now.toLocaleTimeString([], {
-          hour: "2-digit",
-          minute: "2-digit",
-          second: "2-digit",
-        })
-      );
-      setDate(
-        now.toLocaleDateString("en-US", {
-          weekday: "long",
-          year: "numeric",
-          month: "long",
-          day: "numeric",
-        })
-      );
-    };
-
-    updateTime();
-    const timer = setInterval(updateTime, 1000);
-    return () => clearInterval(timer);
-  }, []);
 
   /* ================= ACTIVE FIRE ALERTS ================= */
   useEffect(() => {
@@ -198,22 +164,6 @@ const AdminDashboard = () => {
 
           {/* ROW 1 */}
           <div className={styles.row}>
-            <div className={styles.cardInfo}>
-              <div className={styles.cardTop}>
-                <FaRegClock className={styles.cardIcon} />
-                <p className={styles.bigText}>{time}</p>
-              </div>
-              <span className={styles.cardLabel}>{date}</span>
-            </div>
-
-            <div className={`${styles.card} ${tempClass}`}>
-              <div className={styles.cardTop}>
-                <FaCloudSun className={styles.cardIcon} />
-                <p className={styles.bigText}>{temperature}°C</p>
-              </div>
-              <span className={styles.cardLabel}>Weather</span>
-            </div>
-
             <div className={styles.cardCritical}>
               <div className={styles.cardTop}>
                 <FaFire className={styles.cardIcon} />
@@ -229,25 +179,6 @@ const AdminDashboard = () => {
               </div>
               <span className={styles.cardLabel}>Available Teams</span>
             </div>
-          </div>
-
-          {/* ROW 2 */}
-          <div className={styles.row}>
-            <div className={styles.cardSuccess}>
-              <div className={styles.cardTop}>
-                <FaUserCheck className={styles.cardIcon} />
-                <p className={styles.bigNumber}>{availableResponders}</p>
-              </div>
-              <span className={styles.cardLabel}>Responders Available</span>
-            </div>
-
-            <div className={styles.cardInfo}>
-              <div className={styles.cardTop}>
-                <FaUserClock className={styles.cardIcon} />
-                <p className={styles.bigNumber}>{dispatchedResponders}</p>
-              </div>
-              <span className={styles.cardLabel}>Dispatched Responders</span>
-            </div>
 
             <div className={styles.card}>
               <div className={styles.cardTop}>
@@ -258,14 +189,39 @@ const AdminDashboard = () => {
             </div>
           </div>
 
-          {/* ANALYTICS CARD */}
-          <div
-            className={styles.analyticsCard}
-            onClick={() => setShowMonthlyModal(true)}
-          >
-            <FaChartLine />
-            <span>Fire Alerts Analytics (Yearly)</span>
-          </div>
+          {/* ROW 2 */}
+<div className={styles.row}>
+  <div className={styles.cardSuccess}>
+    <div className={styles.cardTop}>
+      <FaUserCheck className={styles.cardIcon} />
+      <p className={styles.bigNumber}>{availableResponders}</p>
+    </div>
+    <span className={styles.cardLabel}>Responders Available</span>
+  </div>
+
+  <div className={styles.cardInfo}>
+    <div className={styles.cardTop}>
+      <FaUserClock className={styles.cardIcon} />
+      <p className={styles.bigNumber}>{dispatchedResponders}</p>
+    </div>
+    <span className={styles.cardLabel}>Dispatched Responders</span>
+  </div>
+
+  {/* ✅ Analytics Card */}
+  <div
+    className={styles.card}
+    onClick={() => setShowMonthlyModal(true)}
+    style={{ cursor: "pointer" }}
+  >
+    <div className={styles.cardTop}>
+      <FaChartLine className={styles.cardIcon} />
+      <p className={styles.bigText}>View</p>
+    </div>
+    <span className={styles.cardLabel}>
+      Fire Alerts Analytics (Yearly)
+    </span>
+  </div>
+</div>
         </div>
       </div>
 
