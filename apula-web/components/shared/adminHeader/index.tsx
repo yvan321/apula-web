@@ -15,6 +15,8 @@ import {
   Send,
   ClipboardList,
   CarFront, Car,
+  Menu,
+  X,
 } from "lucide-react";
 
 import { auth, db } from "@/lib/firebase";
@@ -133,8 +135,13 @@ export default function AdminHeader() {
       <aside className={`${styles.sidebar} ${sidebarOpen ? styles.sidebarOpen : ""}`}>
         <div className={styles.sidebarHeader}>
           <Image src="/logo.png" alt="Sidebar Logo" width={150} height={75} />
-          <button className={styles.closeSidebar} onClick={toggleSidebar}>
-            &times;
+          <button
+            className={styles.closeSidebar}
+            onClick={toggleSidebar}
+            aria-label="Close sidebar"
+            type="button"
+          >
+            <X size={18} />
           </button>
         </div>
 
@@ -142,6 +149,7 @@ export default function AdminHeader() {
           <a
             href="/dashboard"
             className={`${styles.sidebarLink} ${isActive("/dashboard") ? styles.activeLink : ""}`}
+            onClick={() => setSidebarOpen(false)}
           >
             <LayoutDashboard size={18} className={styles.icon} />
             <span>Dashboard</span>
@@ -153,6 +161,7 @@ export default function AdminHeader() {
             className={`${styles.sidebarLink} ${
               isActive("/dashboard/notifications") ? styles.activeLink : ""
             }`}
+            onClick={() => setSidebarOpen(false)}
           >
             <div className={styles.notifWrapper}>
               <Bell size={18} className={styles.icon} />
@@ -168,6 +177,7 @@ export default function AdminHeader() {
             <a
               href="/dashboard/users"
               className={`${styles.sidebarLink} ${isActive("/dashboard/users") ? styles.activeLink : ""}`}
+              onClick={() => setSidebarOpen(false)}
             >
               <Users size={18} className={styles.icon} />
               <span>Users</span>
@@ -179,6 +189,7 @@ export default function AdminHeader() {
             className={`${styles.sidebarLink} ${
               isActive("/dashboard/ResponderRequest") ? styles.activeLink : ""
             }`}
+            onClick={() => setSidebarOpen(false)}
           >
             <UserCheck size={18} className={styles.icon} />
             <span>Request</span>
@@ -189,6 +200,7 @@ export default function AdminHeader() {
   className={`${styles.sidebarLink} ${
     isActive("/dashboard/Management") ? styles.activeLink : ""
   }`}
+  onClick={() => setSidebarOpen(false)}
 >
   <Car size={18} className={styles.icon} />
   <span>Truck & Team</span>
@@ -200,6 +212,7 @@ export default function AdminHeader() {
   className={`${styles.sidebarLink} ${
     isActive("/dashboard/Assign") ? styles.activeLink : ""
   }`}
+            onClick={() => setSidebarOpen(false)}
 >
   <ClipboardList size={18} className={styles.icon} />
 <span>Assign</span>
@@ -211,6 +224,7 @@ export default function AdminHeader() {
             className={`${styles.sidebarLink} ${
               isActive("/dashboard/dispatch") ? styles.activeLink : ""
             }`}
+            onClick={() => setSidebarOpen(false)}
           >
             <Send size={18} className={styles.icon} />
             <span>Dispatch</span>
@@ -221,6 +235,7 @@ export default function AdminHeader() {
             className={`${styles.sidebarLink} ${
               isActive("/dashboard/reports") ? styles.activeLink : ""
             }`}
+            onClick={() => setSidebarOpen(false)}
           >
             <FileText size={18} className={styles.icon} />
             <span>Reports</span>
@@ -231,6 +246,7 @@ export default function AdminHeader() {
             className={`${styles.sidebarLink} ${
               isActive("/dashboard/settings") ? styles.activeLink : ""
             }`}
+            onClick={() => setSidebarOpen(false)}
           >
             <Settings size={18} className={styles.icon} />
             <span>Settings</span>
@@ -243,12 +259,19 @@ export default function AdminHeader() {
         </button>
       </aside>
 
+      {sidebarOpen && (
+        <div
+          className={styles.sidebarOverlay}
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
       {/* Header */}
       <header className={styles.header}>
         <div className={styles.logoWrapper}>
           <div className={styles.menuWrapper}>
-            <button className={styles.menuButton} onClick={toggleSidebar}>
-              &#9776;
+            <button className={styles.menuButton} onClick={toggleSidebar} aria-label="Open sidebar" type="button">
+              <Menu size={22} />
             </button>
             {unreadCount > 0 && <span className={styles.menuBadge}>{unreadCount}</span>}
           </div>

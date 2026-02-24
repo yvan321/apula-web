@@ -8,7 +8,7 @@
   font-family: var(--font-poppins), sans-serif;
   justify-content: space-between;
   align-items: center;
-  background-color: rgba(94, 3, 5, 1);
+  background-color: var(--header-bg);
   padding: 0 5%;
   color: var(--header-text);
   position: relative;
@@ -16,9 +16,8 @@
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.25);
 }
 
-
 .logoWrapper {
-    background-color: var(--header-bg);
+  display: flex;
   align-items: center;
   gap: 1rem;
   flex-shrink: 0;
@@ -28,13 +27,11 @@
   margin-bottom: 15px; 
 }
 
-
-
 .rightWrapper {
   display: flex;
   align-items: center;
   gap: 1.25rem;
-    color: var(--header-text);
+}
 
 .searchWrapper,
 .authWrapper {
@@ -43,28 +40,37 @@
 }
 
 .authButton {
-    background-color: var(--header-text);
+  color: var(--header-text);
   text-decoration: none;
   font-weight: bold;
   padding: 0.4rem 0.8rem;
 }
 
 .divider {
-    color: var(--header-text);
+  width: 1px;
   height: 24px;
-  background-color: white;
+  background-color: var(--header-text);
   opacity: 0.5;
 }
 
 .menuButton {
-  display: block; 
-  background: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
   border: none;
-  color: white;
+  color: var(--header-text);
   cursor: pointer;
   font-size: 24px;
+  width: 40px;
+  height: 40px;
+  line-height: 1;
+  padding: 0;
+  border-radius: 8px;
+  -webkit-appearance: none;
+  appearance: none;
 }
-    color: var(--header-text);
+
 .userInfo {
   display: flex;
   align-items: center;
@@ -84,22 +90,21 @@
   font-size: 1.25rem;
   text-transform: uppercase;
   margin-left: 0.75rem;
-    font-size: 28px;
-    color: var(--header-text);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
 }
 
 .userName {
   font-size: 16px;
   font-weight: 500;
-  color: white;
+  color: var(--header-text);
 }
 
 .headerText {
-    color: var(--header-text);
+  color: var(--header-text);
   font-weight: bold;
   font-size: 1.5rem;
 }
-
 
 /* menu dropdown */
 .mobileMenu {
@@ -128,10 +133,17 @@
   left: -250px;
   width: 250px;
   height: 100vh;
-  background-color: rgba(94, 3, 5, 1);
+  background-color: var(--header-bg);
   box-shadow: 2px 0 6px rgba(0, 0, 0, 0.1);
   transition: left 0.3s ease-in-out;
   z-index: 1000;
+}
+
+.sidebarOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.35);
+  z-index: 900;
 }
 
 .sidebarOpen {
@@ -155,12 +167,17 @@
 .closeSidebar {
   position: absolute;
   right: 1rem;
-  background: none;
+  background: transparent;
   border: none;
-  font-size: 28px;
-  color: white;
+  width: 36px;
+  height: 36px;
+  color: var(--header-text);
   cursor: pointer;
   line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
 }
 
 .sidebarNav {
@@ -175,7 +192,7 @@
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  color: white;
+  color: var(--header-text);
   text-decoration: none;
   font-weight: 500;
   padding: 0.75rem 1rem;
