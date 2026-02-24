@@ -10,7 +10,7 @@
   align-items: center;
   background-color: rgba(94, 3, 5, 1);
   padding: 0 5%;
-  color: white;
+  color: var(--header-text);
   position: relative;
   height: 80px;
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.25);
@@ -18,7 +18,7 @@
 
 
 .logoWrapper {
-  display: flex;
+    background-color: var(--header-bg);
   align-items: center;
   gap: 1rem;
   flex-shrink: 0;
@@ -34,7 +34,7 @@
   display: flex;
   align-items: center;
   gap: 1.25rem;
-}
+    color: var(--header-text);
 
 .searchWrapper,
 .authWrapper {
@@ -43,14 +43,14 @@
 }
 
 .authButton {
-  color: white;
+    background-color: var(--header-text);
   text-decoration: none;
   font-weight: bold;
   padding: 0.4rem 0.8rem;
 }
 
 .divider {
-  width: 1px;
+    color: var(--header-text);
   height: 24px;
   background-color: white;
   opacity: 0.5;
@@ -64,7 +64,7 @@
   cursor: pointer;
   font-size: 24px;
 }
-
+    color: var(--header-text);
 .userInfo {
   display: flex;
   align-items: center;
@@ -84,8 +84,8 @@
   font-size: 1.25rem;
   text-transform: uppercase;
   margin-left: 0.75rem;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+    font-size: 28px;
+    color: var(--header-text);
 }
 
 .userName {
@@ -95,7 +95,7 @@
 }
 
 .headerText {
-  color: var(--color-yellow);
+    color: var(--header-text);
   font-weight: bold;
   font-size: 1.5rem;
 }
