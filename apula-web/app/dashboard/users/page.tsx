@@ -53,14 +53,24 @@ export default function UsersPage() {
   const norm = (r?: string) => (r ? r.toLowerCase() : "");
 
   const totalAll = users.length;
-  const totalAdmins = users.filter((u) => norm(u.role) === "admin").length;
+ const totalAdmins = users.filter(
+  (u) => norm(u.role) === "admin" || norm(u.role) === "superadmin"
+).length;
   const totalResponders = users.filter((u) => norm(u.role) === "responder").length;
   const totalUsers = users.filter((u) => norm(u.role) === "user").length;
 
   const roleMatches = (user: User) => {
-    if (selectedRole === "All") return true;
-    return norm(user.role) === selectedRole.toLowerCase();
-  };
+  if (selectedRole === "All") return true;
+
+  const role = norm(user.role);
+
+  // When Admin card is clicked, include superadmin
+  if (selectedRole === "Admin") {
+    return role === "admin" || role === "superadmin";
+  }
+
+  return role === selectedRole.toLowerCase();
+};
 
   const matchesSearch = (user: User) => {
     const q = searchTerm.toLowerCase();

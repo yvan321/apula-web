@@ -423,7 +423,7 @@ const latest = snap.docs
 
       <div className={styles.container}>
         <div className={styles.contentSection}>
-          <h2 className={styles.pageTitle}>Team & Vehicle Dispatch</h2>
+          <h2 className={styles.pageTitle}>Team & Truck Dispatch</h2>
           <hr className={styles.separator} />
 
           {/* SEARCH */}
@@ -443,7 +443,7 @@ const latest = snap.docs
             <thead>
               <tr>
                 <th>Team</th>
-                <th>Vehicle</th>
+                <th>Truck</th>
                 <th>Members</th>
                 <th>Status</th>
                 <th>Action</th>

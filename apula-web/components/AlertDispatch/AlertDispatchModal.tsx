@@ -343,14 +343,31 @@ const groupedList = teams
                       <td>{a.userName}</td>
                       <td>{a.userContact}</td>
                       <td>{a.userAddress}</td>
-                      <td>
-                        <button
-                          className={styles.assignBtn}
-                          onClick={() => handleAlertSelect(a)}
-                        >
-                          Select
-                        </button>
-                      </td>
+                      <td style={{ display: "flex", gap: "8px" }}>
+  <button
+    className={styles.assignBtn}
+    onClick={() => handleAlertSelect(a)}
+  >
+    Select
+  </button>
+
+  <button
+    className={styles.viewBtn}
+    onClick={() => {
+      if (!a.snapshotUrl) {
+        alert("No snapshot available.");
+        return;
+      }
+
+      const newTab = window.open("", "_blank");
+      if (newTab) {
+        newTab.location.href = a.snapshotUrl;
+      }
+    }}
+  >
+    View
+  </button>
+</td>
                     </tr>
                   ))}
                 </tbody>

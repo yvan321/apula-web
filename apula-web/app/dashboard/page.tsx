@@ -30,12 +30,20 @@ import {
 } from "recharts";
 
 const AdminDashboard = () => {
+
+  /* ================= YEAR STATE ================= */
+  const currentYear = new Date().getFullYear();
+  const [selectedYear, setSelectedYear] = useState(currentYear);
+  const [availableYears, setAvailableYears] = useState<number[]>([]);
+
+  /* ================= COUNTERS ================= */
   const [activeAlertCount, setActiveAlertCount] = useState(0);
   const [availableResponders, setAvailableResponders] = useState(0);
   const [dispatchedResponders, setDispatchedResponders] = useState(0);
   const [availableTrucks, setAvailableTrucks] = useState(0);
   const [availableTeams, setAvailableTeams] = useState(0);
 
+  /* ================= ANALYTICS ================= */
   const [monthData, setMonthData] = useState<any[]>([]);
   const [showMonthlyModal, setShowMonthlyModal] = useState(false);
 
@@ -53,7 +61,7 @@ const AdminDashboard = () => {
     return () => unsub();
   }, []);
 
-  /* ================= RESPONDERS (FROM USERS) ================= */
+  /* ================= RESPONDERS ================= */
   useEffect(() => {
     const unsub = onSnapshot(collection(db, "users"), (snap) => {
       let available = 0;
@@ -82,9 +90,7 @@ const AdminDashboard = () => {
 
       snap.forEach((doc) => {
         const d = doc.data();
-        if (d.status === "Available") {
-          teams++;
-        }
+        if (d.status === "Available") teams++;
       });
 
       setAvailableTeams(teams);
@@ -100,9 +106,7 @@ const AdminDashboard = () => {
 
       snap.forEach((doc) => {
         const d = doc.data();
-        if (d.status === "Available") {
-          trucks++;
-        }
+        if (d.status === "Available") trucks++;
       });
 
       setAvailableTrucks(trucks);
@@ -111,10 +115,10 @@ const AdminDashboard = () => {
     return () => unsub();
   }, []);
 
-  /* ================= YEARLY ANALYTICS ================= */
+  /* ================= AUTO DETECT YEARS ================= */
   useEffect(() => {
     const unsub = onSnapshot(collection(db, "alerts"), (snapshot) => {
-      const monthly = Array(12).fill(0);
+      const years = new Set<number>();
 
       snapshot.forEach((doc) => {
         const data = doc.data();
@@ -129,6 +133,46 @@ const AdminDashboard = () => {
         }
 
         if (!d || isNaN(d.getTime())) return;
+
+        years.add(d.getFullYear());
+      });
+
+      const sortedYears = Array.from(years).sort((a, b) => b - a);
+      setAvailableYears(sortedYears);
+
+      // If selected year doesn't exist anymore, default to newest
+      if (!sortedYears.includes(selectedYear) && sortedYears.length > 0) {
+        setSelectedYear(sortedYears[0]);
+      }
+    });
+
+    return () => unsub();
+  }, []);
+
+  /* ================= YEARLY ANALYTICS FILTERED ================= */
+  useEffect(() => {
+    const unsub = onSnapshot(collection(db, "alerts"), (snapshot) => {
+      const monthly = Array(12).fill(0);
+
+      snapshot.forEach((doc) => {
+        const data = doc.data();
+        if (!data.timestamp) return;
+
+        let d: Date | null = null;
+
+        // Firestore Timestamp
+        if (data.timestamp?.seconds) {
+          d = new Date(data.timestamp.seconds * 1000);
+        }
+        // String timestamp
+        else if (typeof data.timestamp === "string") {
+          d = new Date(data.timestamp);
+        }
+
+        if (!d || isNaN(d.getTime())) return;
+
+        // ⭐ FILTER BY SELECTED YEAR
+        if (d.getFullYear() !== selectedYear) return;
 
         monthly[d.getMonth()] += 1;
       });
@@ -145,7 +189,7 @@ const AdminDashboard = () => {
     });
 
     return () => unsub();
-  }, []);
+  }, [selectedYear]);
 
   return (
     <div>
@@ -190,38 +234,38 @@ const AdminDashboard = () => {
           </div>
 
           {/* ROW 2 */}
-<div className={styles.row}>
-  <div className={styles.cardSuccess}>
-    <div className={styles.cardTop}>
-      <FaUserCheck className={styles.cardIcon} />
-      <p className={styles.bigNumber}>{availableResponders}</p>
-    </div>
-    <span className={styles.cardLabel}>Responders Available</span>
-  </div>
+          <div className={styles.row}>
+            <div className={styles.cardSuccess}>
+              <div className={styles.cardTop}>
+                <FaUserCheck className={styles.cardIcon} />
+                <p className={styles.bigNumber}>{availableResponders}</p>
+              </div>
+              <span className={styles.cardLabel}>Responders Available</span>
+            </div>
 
-  <div className={styles.cardInfo}>
-    <div className={styles.cardTop}>
-      <FaUserClock className={styles.cardIcon} />
-      <p className={styles.bigNumber}>{dispatchedResponders}</p>
-    </div>
-    <span className={styles.cardLabel}>Dispatched Responders</span>
-  </div>
+            <div className={styles.cardInfo}>
+              <div className={styles.cardTop}>
+                <FaUserClock className={styles.cardIcon} />
+                <p className={styles.bigNumber}>{dispatchedResponders}</p>
+              </div>
+              <span className={styles.cardLabel}>Dispatched Responders</span>
+            </div>
 
-  {/* ✅ Analytics Card */}
-  <div
-    className={styles.card}
-    onClick={() => setShowMonthlyModal(true)}
-    style={{ cursor: "pointer" }}
-  >
-    <div className={styles.cardTop}>
-      <FaChartLine className={styles.cardIcon} />
-      <p className={styles.bigText}>View</p>
-    </div>
-    <span className={styles.cardLabel}>
-      Fire Alerts Analytics (Yearly)
-    </span>
-  </div>
-</div>
+            {/* ANALYTICS CARD */}
+            <div
+              className={styles.card}
+              onClick={() => setShowMonthlyModal(true)}
+              style={{ cursor: "pointer" }}
+            >
+              <div className={styles.cardTop}>
+                <FaChartLine className={styles.cardIcon} />
+                <p className={styles.bigText}>View</p>
+              </div>
+              <span className={styles.cardLabel}>
+                Fire Alerts Analytics
+              </span>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -229,7 +273,24 @@ const AdminDashboard = () => {
       {showMonthlyModal && (
         <div className={styles.modalOverlay}>
           <div className={styles.modalBox}>
-            <h2 className={styles.modalTitle}>Yearly Fire Alerts Overview</h2>
+
+            <div className={styles.analyticsHeader}>
+              <h2 className={styles.modalTitle}>
+                Fire Alerts Overview ({selectedYear})
+              </h2>
+
+              <select
+                value={selectedYear}
+                onChange={(e) => setSelectedYear(Number(e.target.value))}
+                className={styles.yearSelect}
+              >
+                {availableYears.map((year) => (
+                  <option key={year} value={year}>
+                    {year}
+                  </option>
+                ))}
+              </select>
+            </div>
 
             <div className={styles.chartContainer}>
               <ResponsiveContainer width="100%" height={300}>

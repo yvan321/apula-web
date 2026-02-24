@@ -204,7 +204,7 @@ export default function AssignPage() {
 
       <div className={styles.container}>
         <div className={styles.contentSection}>
-          <h2 className={styles.pageTitle}>Team Assignment</h2>
+          <h2 className={styles.pageTitle}>Assign Member</h2>
 
           <div className={styles.searchWrapper}>
   
@@ -218,7 +218,7 @@ export default function AssignPage() {
               className={styles.assignBtn}
               onClick={() => setShowAssignModal(true)}
             >
-              Assign Team
+              Assign Member
             </button>
           </div>
 
@@ -227,7 +227,7 @@ export default function AssignPage() {
               <tr>
                 <th>Name</th>
                 <th>Team</th>
-                <th>Vehicle</th>
+                <th>Truck</th>
               </tr>
             </thead>
             <tbody>
@@ -322,7 +322,7 @@ export default function AssignPage() {
                 Close
               </button>
               <button className={styles.assignBtn} onClick={saveAssignments}>
-                Save Assignment
+                Save
               </button>
             </div>
           </div>

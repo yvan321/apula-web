@@ -178,7 +178,7 @@ export default function AdminHeader() {
   }`}
 >
   <Car size={18} className={styles.icon} />
-  <span>Fleet & Teams</span>
+  <span>Truck & Team</span>
 </a>
 
 

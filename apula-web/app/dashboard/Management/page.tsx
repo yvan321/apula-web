@@ -404,7 +404,7 @@ export default function TeamVehiclePage() {
 
       <div className={styles.container}>
         <div className={styles.contentSection}>
-          <h2 className={styles.pageTitle}>Team & Vehicle Management</h2>
+          <h2 className={styles.pageTitle}>Team & Truck Management</h2>
           <hr className={styles.separator} />
 
           {/* TABS */}
@@ -420,7 +420,7 @@ export default function TeamVehiclePage() {
               className={`${styles.tabBtn} ${activeTab === "vehicles" ? styles.activeTab : ""}`}
               onClick={() => setActiveTab("vehicles")}
             >
-              <FaTruck /> Vehicles
+              <FaTruck /> Trucks
             </button>
           </div>
 
@@ -502,7 +502,7 @@ export default function TeamVehiclePage() {
                 <h3 className={styles.subTitle}>Vehicles</h3>
                 <div>
                   <button className={styles.addBtn} onClick={() => { setShowAddVehicleModal(true); setEditingVehicle(null); }}>
-                    + Add Vehicle
+                    + Add Truck
                   </button>
                 </div>
               </div>
