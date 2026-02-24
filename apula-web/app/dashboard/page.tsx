@@ -5,12 +5,12 @@ import AdminHeader from "@/components/shared/adminHeader";
 import styles from "./adminDashboardStyles.module.css";
 
 import {
-  FaChartLine,
   FaFire,
   FaUsers,
   FaTruck,
   FaUserCheck,
   FaUserClock,
+  FaCheckCircle,
 } from "react-icons/fa";
 
 import { db } from "@/lib/firebase";
@@ -20,8 +20,8 @@ import AlertBellButton from "@/components/AlertDispatch/AlertBellButton";
 import AlertDispatchModal from "@/components/AlertDispatch/AlertDispatchModal";
 
 import {
-  BarChart,
-  Bar,
+  LineChart,
+  Line,
   XAxis,
   YAxis,
   Tooltip,
@@ -29,23 +29,35 @@ import {
   ResponsiveContainer,
 } from "recharts";
 
+type Period = "week" | "month" | "year";
+
+type ChartPoint = {
+  label: string;
+  alerts: number;
+  fullDate?: string;
+};
+
 const AdminDashboard = () => {
-
-  /* ================= YEAR STATE ================= */
-  const currentYear = new Date().getFullYear();
-  const [selectedYear, setSelectedYear] = useState(currentYear);
-  const [availableYears, setAvailableYears] = useState<number[]>([]);
-
   /* ================= COUNTERS ================= */
   const [activeAlertCount, setActiveAlertCount] = useState(0);
   const [availableResponders, setAvailableResponders] = useState(0);
   const [dispatchedResponders, setDispatchedResponders] = useState(0);
   const [availableTrucks, setAvailableTrucks] = useState(0);
   const [availableTeams, setAvailableTeams] = useState(0);
+  const [resolvedTodayCount, setResolvedTodayCount] = useState(0);
 
   /* ================= ANALYTICS ================= */
-  const [monthData, setMonthData] = useState<any[]>([]);
-  const [showMonthlyModal, setShowMonthlyModal] = useState(false);
+  const [selectedPeriod, setSelectedPeriod] = useState<Period>("month");
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [availableYears, setAvailableYears] = useState<number[]>([]);
+  const [chartData, setChartData] = useState<ChartPoint[]>([]);
+  const [alertsDates, setAlertsDates] = useState<Date[]>([]);
+
+  const periodLabelMap: Record<Period, string> = {
+    week: "Week",
+    month: "Month",
+    year: "Year",
+  };
 
   /* ================= ACTIVE FIRE ALERTS ================= */
   useEffect(() => {
@@ -115,10 +127,10 @@ const AdminDashboard = () => {
     return () => unsub();
   }, []);
 
-  /* ================= AUTO DETECT YEARS ================= */
+  /* ================= INCIDENT TIMESTAMPS ================= */
   useEffect(() => {
     const unsub = onSnapshot(collection(db, "alerts"), (snapshot) => {
-      const years = new Set<number>();
+      const parsedDates: Date[] = [];
 
       snapshot.forEach((doc) => {
         const data = doc.data();
@@ -134,62 +146,151 @@ const AdminDashboard = () => {
 
         if (!d || isNaN(d.getTime())) return;
 
-        years.add(d.getFullYear());
+        parsedDates.push(d);
       });
 
-      const sortedYears = Array.from(years).sort((a, b) => b - a);
-      setAvailableYears(sortedYears);
+      setAlertsDates(parsedDates);
 
-      // If selected year doesn't exist anymore, default to newest
-      if (!sortedYears.includes(selectedYear) && sortedYears.length > 0) {
-        setSelectedYear(sortedYears[0]);
+      const years = Array.from(new Set(parsedDates.map((d) => d.getFullYear()))).sort(
+        (a, b) => b - a
+      );
+      setAvailableYears(years);
+      if (years.length > 0 && !years.includes(selectedYear)) {
+        setSelectedYear(years[0]);
       }
+    });
+
+    return () => unsub();
+  }, [selectedYear]);
+
+  /* ================= RESOLVED TODAY ================= */
+  useEffect(() => {
+    const resolvedQuery = query(
+      collection(db, "alerts"),
+      where("status", "==", "Resolved")
+    );
+
+    const unsub = onSnapshot(resolvedQuery, (snapshot) => {
+      const now = new Date();
+      const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+
+      let count = 0;
+
+      snapshot.forEach((doc) => {
+        const data = doc.data();
+        const rawDate = data.resolvedAt || data.updatedAt || data.timestamp;
+        if (!rawDate) return;
+
+        let resolvedDate: Date | null = null;
+        if (rawDate?.seconds) {
+          resolvedDate = new Date(rawDate.seconds * 1000);
+        } else if (typeof rawDate === "string") {
+          resolvedDate = new Date(rawDate);
+        } else if (rawDate instanceof Date) {
+          resolvedDate = rawDate;
+        }
+
+        if (!resolvedDate || isNaN(resolvedDate.getTime())) return;
+
+        if (resolvedDate >= startOfDay && resolvedDate < endOfDay) {
+          count += 1;
+        }
+      });
+
+      setResolvedTodayCount(count);
     });
 
     return () => unsub();
   }, []);
 
-  /* ================= YEARLY ANALYTICS FILTERED ================= */
+  /* ================= PERIOD AGGREGATION ================= */
   useEffect(() => {
-    const unsub = onSnapshot(collection(db, "alerts"), (snapshot) => {
-      const monthly = Array(12).fill(0);
+    const now = new Date();
+    const referenceDate = new Date(selectedYear, now.getMonth(), now.getDate());
 
-      snapshot.forEach((doc) => {
-        const data = doc.data();
-        if (!data.timestamp) return;
+    if (selectedPeriod === "week") {
+      const weekStart = new Date(referenceDate);
+      const weekEnd = new Date(referenceDate);
+      weekStart.setDate(referenceDate.getDate() - 6);
+      weekStart.setHours(0, 0, 0, 0);
+      weekEnd.setHours(23, 59, 59, 999);
 
-        let d: Date | null = null;
-
-        // Firestore Timestamp
-        if (data.timestamp?.seconds) {
-          d = new Date(data.timestamp.seconds * 1000);
-        }
-        // String timestamp
-        else if (typeof data.timestamp === "string") {
-          d = new Date(data.timestamp);
-        }
-
-        if (!d || isNaN(d.getTime())) return;
-
-        // ⭐ FILTER BY SELECTED YEAR
-        if (d.getFullYear() !== selectedYear) return;
-
-        monthly[d.getMonth()] += 1;
+      const buckets: ChartPoint[] = Array.from({ length: 7 }, (_, index) => {
+        const d = new Date(weekStart);
+        d.setDate(weekStart.getDate() + index);
+        return {
+          label: `${d.toLocaleDateString("en-US", { weekday: "short" })} ${d.getDate()}`,
+          alerts: 0,
+        };
       });
 
-      setMonthData(
-        monthly.map((count, index) => ({
-          month: [
-            "Jan","Feb","Mar","Apr","May","Jun",
-            "Jul","Aug","Sep","Oct","Nov","Dec",
-          ][index],
-          alerts: count,
-        }))
-      );
+      alertsDates.forEach((d) => {
+        if (d < weekStart || d > weekEnd) return;
+        const dayIndex = Math.floor(
+          (new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime() - weekStart.getTime()) /
+            (1000 * 60 * 60 * 24)
+        );
+
+        if (dayIndex >= 0 && dayIndex < 7) {
+          buckets[dayIndex].alerts += 1;
+        }
+      });
+
+      setChartData(buckets);
+      return;
+    }
+
+    if (selectedPeriod === "month") {
+      const monthStart = new Date(selectedYear, now.getMonth(), 1);
+      const daysInMonth = new Date(selectedYear, now.getMonth() + 1, 0).getDate();
+
+      const buckets: ChartPoint[] = Array.from({ length: daysInMonth }, (_, index) => ({
+        label: `${index + 1}`,
+        alerts: 0,
+        fullDate: new Date(selectedYear, now.getMonth(), index + 1).toLocaleDateString("en-US", {
+          day: "numeric",
+          month: "long",
+          year: "numeric",
+        }),
+      }));
+
+      alertsDates.forEach((d) => {
+        if (
+          d.getFullYear() === monthStart.getFullYear() &&
+          d.getMonth() === monthStart.getMonth()
+        ) {
+          buckets[d.getDate() - 1].alerts += 1;
+        }
+      });
+
+      setChartData(buckets);
+      return;
+    }
+
+    const yearly = Array(12).fill(0);
+    alertsDates.forEach((d) => {
+      if (d.getFullYear() === selectedYear) {
+        yearly[d.getMonth()] += 1;
+      }
     });
 
-    return () => unsub();
-  }, [selectedYear]);
+    setChartData(
+      yearly.map((count, index) => ({
+        label: [
+          "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+          "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+        ][index],
+        alerts: count,
+      }))
+    );
+  }, [alertsDates, selectedPeriod, selectedYear]);
+
+  const tooltipLabelFormatter = (label: string | number) => {
+    if (selectedPeriod !== "month") return String(label);
+    const point = chartData.find((entry) => entry.label === String(label));
+    return point?.fullDate || String(label);
+  };
 
   return (
     <div>
@@ -251,38 +352,25 @@ const AdminDashboard = () => {
               <span className={styles.cardLabel}>Dispatched Responders</span>
             </div>
 
-            {/* ANALYTICS CARD */}
-            <div
-              className={styles.card}
-              onClick={() => setShowMonthlyModal(true)}
-              style={{ cursor: "pointer" }}
-            >
+            <div className={styles.cardSuccess}>
               <div className={styles.cardTop}>
-                <FaChartLine className={styles.cardIcon} />
-                <p className={styles.bigText}>View</p>
+                <FaCheckCircle className={styles.cardIcon} />
+                <p className={styles.bigNumber}>{resolvedTodayCount}</p>
               </div>
-              <span className={styles.cardLabel}>
-                Fire Alerts Analytics
-              </span>
+              <span className={styles.cardLabel}>Resolved Fire Incidents (Today)</span>
             </div>
           </div>
-        </div>
-      </div>
 
-      {/* MODAL */}
-      {showMonthlyModal && (
-        <div className={styles.modalOverlay}>
-          <div className={styles.modalBox}>
-
+          <div className={styles.analyticsSection}>
             <div className={styles.analyticsHeader}>
-              <h2 className={styles.modalTitle}>
-                Fire Alerts Overview ({selectedYear})
+              <h2 className={styles.analyticsTitle}>
+                Fire Incidents Overview ({periodLabelMap[selectedPeriod]} {selectedYear})
               </h2>
 
               <select
+                className={styles.yearSelect}
                 value={selectedYear}
                 onChange={(e) => setSelectedYear(Number(e.target.value))}
-                className={styles.yearSelect}
               >
                 {availableYears.map((year) => (
                   <option key={year} value={year}>
@@ -292,27 +380,46 @@ const AdminDashboard = () => {
               </select>
             </div>
 
-            <div className={styles.chartContainer}>
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={monthData}>
-                  <CartesianGrid stroke="#eeeeee" strokeDasharray="3 3" />
-                  <XAxis dataKey="month" />
-                  <YAxis />
-                  <Tooltip />
-                  <Bar dataKey="alerts" fill="#2e7d32" />
-                </BarChart>
-              </ResponsiveContainer>
+            <div className={styles.periodSwitcher}>
+              {(["week", "month", "year"] as Period[]).map((period) => (
+                <button
+                  key={period}
+                  className={`${styles.periodBtn} ${
+                    selectedPeriod === period ? styles.periodBtnActive : ""
+                  }`}
+                  onClick={() => setSelectedPeriod(period)}
+                >
+                  {period.charAt(0).toUpperCase() + period.slice(1)}
+                </button>
+              ))}
             </div>
 
-            <button
-              className={styles.closeBtn}
-              onClick={() => setShowMonthlyModal(false)}
-            >
-              Close
-            </button>
+            <div className={styles.chartsGrid}>
+              <div className={styles.chartContainer}>
+                <h4 className={styles.chartTitle}>Line Trend</h4>
+                <ResponsiveContainer width="100%" height={280}>
+                  <LineChart
+                    data={chartData}
+                    margin={{ top: 16, right: 18, left: 8, bottom: 12 }}
+                  >
+                    <CartesianGrid stroke="#eeeeee" strokeDasharray="3 3" />
+                    <XAxis dataKey="label" padding={{ left: 10, right: 10 }} />
+                    <YAxis allowDecimals={false} />
+                    <Tooltip labelFormatter={tooltipLabelFormatter} />
+                    <Line
+                      type="monotone"
+                      dataKey="alerts"
+                      stroke="#a30000"
+                      strokeWidth={3}
+                      dot={{ r: 3 }}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
           </div>
         </div>
-      )}
+      </div>
     </div>
   );
 };

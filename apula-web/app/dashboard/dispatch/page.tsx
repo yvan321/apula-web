@@ -11,13 +11,14 @@ import {
   where,
   orderBy,
   getDocs,
+  getDoc,
   doc,
   onSnapshot,
   serverTimestamp,
   writeBatch,
 } from "firebase/firestore";
 
-import { db } from "@/lib/firebase";
+import { auth, db } from "@/lib/firebase";
 import AlertBellButton from "@/components/AlertDispatch/AlertBellButton";
 import AlertDispatchModal from "@/components/AlertDispatch/AlertDispatchModal";
 
@@ -236,6 +237,24 @@ const latest = snap.docs
 
     try {
       const batch = writeBatch(db);
+      const currentUser = auth.currentUser;
+
+      let dispatchedByName = "Admin Panel";
+      if (currentUser) {
+        try {
+          const userDoc = await getDoc(doc(db, "users", currentUser.uid));
+          if (userDoc.exists()) {
+            const data = userDoc.data();
+            dispatchedByName =
+              data.name || currentUser.displayName || currentUser.email || "Admin Panel";
+          } else {
+            dispatchedByName = currentUser.displayName || currentUser.email || "Admin Panel";
+          }
+        } catch (error) {
+          console.error("Error reading dispatcher name:", error);
+          dispatchedByName = currentUser.displayName || currentUser.email || "Admin Panel";
+        }
+      }
 
       const responderEmails = respondersList.map((r) => (r.email || "").toLowerCase());
 
@@ -246,6 +265,7 @@ const latest = snap.docs
         alertId: selectedAlert.id,
         alertType: selectedAlert.type,
         alertLocation: selectedAlert.location,
+        snapshotUrl: selectedAlert.snapshotUrl || null,
         responders: respondersList.map((r) => ({
           id: r.id,
           name: r.name,
@@ -260,7 +280,7 @@ const latest = snap.docs
         userEmail: selectedAlert.userEmail,
         status: "Dispatched",
         timestamp: serverTimestamp(),
-        dispatchedBy: "Admin Panel",
+        dispatchedBy: dispatchedByName,
       });
 
       // update each responder doc -> Dispatched

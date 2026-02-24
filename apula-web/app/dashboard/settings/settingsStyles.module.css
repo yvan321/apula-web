@@ -1,16 +1,18 @@
 .container {
   padding: 24px;
-  background-color: #d9d9d9;
+  background-color: var(--app-bg);
   min-height: 100vh;
 }
 
 .contentSection {
-  background-color: white;
+  background-color: var(--panel-bg);
+  color: var(--panel-text);
   padding: 24px;
   border-radius: 12px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.18);
   max-width: 500px;
   margin: 0 auto;
+  border: 1px solid var(--panel-border);
 }
 
 .headerRow {
@@ -42,22 +44,51 @@
 
 .label {
   font-size: 14px;
-  color: #444;
+  color: var(--muted-text);
   font-weight: 500;
 }
 
 .input {
   padding: 10px 14px;
-  border: 1px solid #ccc;
+  border: 1px solid var(--input-border);
   border-radius: 8px;
   font-size: 14px;
   outline: none;
   transition: border-color 0.2s;
+  background: var(--input-bg);
+  color: var(--panel-text);
 }
 
 .input:focus {
   border-color: #ff4d4f;
   box-shadow: 0 0 0 2px rgba(255, 77, 79, 0.1);
+}
+
+.themeRow {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.themeToggle {
+  display: inline-flex;
+  gap: 8px;
+}
+
+.themeBtn {
+  border: 1px solid var(--input-border);
+  background: var(--input-bg);
+  color: var(--panel-text);
+  padding: 8px 14px;
+  border-radius: 999px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.themeBtnActive {
+  background: #a30000;
+  color: #ffffff;
+  border-color: #a30000;
 }
 
 .saveBtn {

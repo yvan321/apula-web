@@ -44,6 +44,19 @@ export default function AdminHeader() {
   const toggleSidebar = () => setSidebarOpen((prev) => !prev);
   const isActive = (path: string) => pathname === path;
 
+  const getFirstNameInitial = (value?: string) => {
+    if (!value) return "U";
+
+    const trimmed = value.trim();
+    if (!trimmed) return "U";
+
+    const firstToken = trimmed.split(/\s+/)[0];
+    const base = firstToken.includes("@") ? firstToken.split("@")[0] : firstToken;
+    const match = base.match(/[A-Za-z0-9]/);
+
+    return match ? match[0].toUpperCase() : "U";
+  };
+
   const handleLogout = async () => {
     await signOut(auth);
     window.location.href = "/login";
@@ -86,7 +99,7 @@ export default function AdminHeader() {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (!user) {
         setUserName("Guest");
-        setInitial("G");
+        setInitial(getFirstNameInitial("Guest"));
         return;
       }
 
@@ -97,17 +110,17 @@ export default function AdminHeader() {
           const name = data.name || "User";
 
           setUserName(name);
-          setInitial(name.charAt(0).toUpperCase());
+          setInitial(getFirstNameInitial(name));
           setRole(data.role || "admin");
         } else {
           const display = user.displayName || "User";
           setUserName(display);
-          setInitial(display.charAt(0).toUpperCase());
+          setInitial(getFirstNameInitial(display || user.email || "User"));
         }
       } catch (err) {
         console.error("Error fetching user data:", err);
         setUserName("User");
-        setInitial("U");
+        setInitial(getFirstNameInitial("User"));
       }
     });
 

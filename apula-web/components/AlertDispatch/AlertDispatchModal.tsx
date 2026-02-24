@@ -9,12 +9,13 @@ import {
   where,
   orderBy,
   getDocs,
+  getDoc,
   writeBatch,
   serverTimestamp,
   doc,
   onSnapshot,
 } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { auth, db } from "@/lib/firebase";
 
 const AlertDispatchModal = () => {
   const [showModal, setShowModal] = useState(false);
@@ -31,7 +32,45 @@ const AlertDispatchModal = () => {
   const [vehicles, setVehicles] = useState<any[]>([]);
 
   const [selectedDispatch, setSelectedDispatch] = useState<any>(null);
-const [showViewModal, setShowViewModal] = useState(false);
+  const [showViewModal, setShowViewModal] = useState(false);
+  const [previewAlert, setPreviewAlert] = useState<any>(null);
+  const [showAlertPreviewModal, setShowAlertPreviewModal] = useState(false);
+  const [previewImageCandidates, setPreviewImageCandidates] = useState<string[]>([]);
+  const [previewImageIndex, setPreviewImageIndex] = useState(0);
+  const [previewImageFailed, setPreviewImageFailed] = useState(false);
+
+  const extractGoogleDriveFileId = (url: string): string | null => {
+    const filePathMatch = url.match(/\/file\/d\/([^/]+)/);
+    if (filePathMatch?.[1]) return filePathMatch[1];
+
+    const directPathMatch = url.match(/\/d\/([^/]+)/);
+    if (directPathMatch?.[1]) return directPathMatch[1];
+
+    const queryMatch = url.match(/[?&]id=([^&]+)/);
+    if (queryMatch?.[1]) return queryMatch[1];
+
+    return null;
+  };
+
+  const buildImageCandidates = (url: string): string[] => {
+    if (!url) return [];
+
+    if (!url.includes("drive.google.com")) {
+      return [url];
+    }
+
+    const fileId = extractGoogleDriveFileId(url);
+    if (!fileId) {
+      return [url];
+    }
+
+    return [
+      `https://drive.google.com/uc?export=view&id=${fileId}`,
+      `https://drive.google.com/thumbnail?id=${fileId}&sz=w1600`,
+      `https://lh3.googleusercontent.com/d/${fileId}=w1600`,
+      url,
+    ];
+  };
 
 
   const viewDispatchInfo = async (teamName: string) => {
@@ -205,6 +244,8 @@ const groupedList = teams
   // ------------------------------------------------------------
   const handleAlertSelect = (alert: any) => {
     setSelectedAlert(alert);
+    setShowAlertPreviewModal(false);
+    setPreviewAlert(null);
     setDispatchStep(2);
   };
 
@@ -231,14 +272,33 @@ const groupedList = teams
   const dispatchResponders = async () => {
     const selected = responders.filter((r) => selectedResponderIds.has(r.id));
 
+    const getDispatcherName = async () => {
+      const currentUser = auth.currentUser;
+      if (!currentUser) return "Admin Panel";
+
+      try {
+        const userDoc = await getDoc(doc(db, "users", currentUser.uid));
+        if (userDoc.exists()) {
+          const data = userDoc.data();
+          return data.name || currentUser.displayName || currentUser.email || "Admin Panel";
+        }
+      } catch (error) {
+        console.error("Error reading dispatcher name:", error);
+      }
+
+      return currentUser.displayName || currentUser.email || "Admin Panel";
+    };
+
     try {
       const batch = writeBatch(db);
       const ref = doc(collection(db, "dispatches"));
+      const dispatchedByName = await getDispatcherName();
 
       batch.set(ref, {
         alertId: selectedAlert.id,
         alertType: selectedAlert.type,
         alertLocation: selectedAlert.location,
+        snapshotUrl: selectedAlert.snapshotUrl || null,
 
         responders: selected.map((r) => {
           const teamName =
@@ -265,7 +325,7 @@ const groupedList = teams
         userEmail: selectedAlert.userEmail,
 
         status: "Dispatched",
-        dispatchedBy: "Admin Panel",
+        dispatchedBy: dispatchedByName,
         timestamp: serverTimestamp(),
       });
 
@@ -317,6 +377,13 @@ const groupedList = teams
   
   if (!showModal) return null;
 
+  const formattedAlertTime = previewAlert?.timestamp?.seconds
+    ? new Date(previewAlert.timestamp.seconds * 1000).toLocaleString()
+    : "Unknown";
+
+  const previewImageSrc =
+    previewImageCandidates[previewImageIndex] || previewAlert?.snapshotUrl || "";
+
   return (
     <div className={styles.modalOverlay}>
       <div className={styles.modalWide}>
@@ -345,10 +412,10 @@ const groupedList = teams
                       <td>{a.userAddress}</td>
                       <td style={{ display: "flex", gap: "8px" }}>
   <button
-    className={styles.assignBtn}
+    className={styles.dispatchBtn}
     onClick={() => handleAlertSelect(a)}
   >
-    Select
+    Dispatch
   </button>
 
   <button
@@ -359,10 +426,12 @@ const groupedList = teams
         return;
       }
 
-      const newTab = window.open("", "_blank");
-      if (newTab) {
-        newTab.location.href = a.snapshotUrl;
-      }
+      setPreviewAlert(a);
+      const candidates = buildImageCandidates(a.snapshotUrl);
+      setPreviewImageCandidates(candidates);
+      setPreviewImageIndex(0);
+      setPreviewImageFailed(false);
+      setShowAlertPreviewModal(true);
     }}
   >
     View
@@ -418,7 +487,7 @@ const groupedList = teams
                     <td>
   {g.status === "Available" && (
     <button
-      className={styles.assignBtn}
+      className={styles.dispatchBtn}
       onClick={() => handleDispatchTeam(g)}
     >
       Dispatch Team
@@ -487,7 +556,7 @@ const groupedList = teams
             </table>
 
             <div className={styles.modalActions}>
-              <button className={styles.assignBtn} onClick={dispatchResponders}>
+              <button className={styles.dispatchBtn} onClick={dispatchResponders}>
                 Dispatch Now
               </button>
 
@@ -499,6 +568,62 @@ const groupedList = teams
         )}
 
       </div>
+      {showAlertPreviewModal && previewAlert && (
+        <div
+          className={styles.modalOverlay}
+          onClick={() => setShowAlertPreviewModal(false)}
+        >
+          <div className={styles.modalWide} onClick={(e) => e.stopPropagation()}>
+            <h3 className={styles.modalTitle}>Alert Snapshot</h3>
+
+            <div className={styles.alertPreviewImageWrap}>
+              <img
+                src={previewImageSrc}
+                alt="Alert snapshot"
+                className={styles.alertPreviewImage}
+                onLoad={() => setPreviewImageFailed(false)}
+                onError={() => {
+                  if (previewImageIndex < previewImageCandidates.length - 1) {
+                    setPreviewImageIndex((prev) => prev + 1);
+                  } else {
+                    setPreviewImageFailed(true);
+                  }
+                }}
+              />
+            </div>
+
+            {previewImageFailed && (
+              <p>
+                Snapshot preview is blocked by file permissions. Set the Google Drive file to
+                <strong> Anyone with the link</strong> and try again.
+              </p>
+            )}
+
+            <div className={styles.alertPreviewInfo}>
+              <p><strong>Reporter:</strong> {previewAlert.userName || "Unknown"}</p>
+              <p><strong>Contact:</strong> {previewAlert.userContact || "Unknown"}</p>
+              <p><strong>Address:</strong> {previewAlert.userAddress || "Unknown"}</p>
+              <p><strong>Status:</strong> {previewAlert.status || "Pending"}</p>
+              <p><strong>Detected At:</strong> {formattedAlertTime}</p>
+            </div>
+
+            <div className={styles.modalActions}>
+              <button
+                className={styles.dispatchBtn}
+                onClick={() => handleAlertSelect(previewAlert)}
+              >
+                Dispatch
+              </button>
+              <button
+                className={styles.closeBtn}
+                onClick={() => setShowAlertPreviewModal(false)}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {showViewModal && selectedDispatch && (
   <div className={styles.modalOverlay} onClick={() => setShowViewModal(false)}>
     <div className={styles.modalWide} onClick={(e) => e.stopPropagation()}>

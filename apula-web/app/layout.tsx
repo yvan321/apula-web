@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Poppins } from "next/font/google";
 import "./globals.css";
 import GlobalLoader from "@/components/GlobalLoader";
+import ThemeClient from "@/components/shared/ThemeClient";
 
 const poppins = Poppins({
   subsets: ["latin"],
@@ -23,6 +24,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={poppins.variable}>
+        <ThemeClient />
         <GlobalLoader />
 
         {/* Main Content */}

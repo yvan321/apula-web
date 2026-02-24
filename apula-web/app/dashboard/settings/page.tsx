@@ -21,6 +21,7 @@ const SettingsPage = () => {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(true);
+  const [theme, setTheme] = useState<"light" | "dark">("dark");
   const router = useRouter();
 
   // ✅ Protect page & load user data
@@ -49,6 +50,19 @@ const SettingsPage = () => {
 
     return () => unsubscribe();
   }, [router]);
+
+  useEffect(() => {
+    const stored = localStorage.getItem("theme");
+    const nextTheme = stored === "light" || stored === "dark" ? stored : "dark";
+    setTheme(nextTheme);
+    document.documentElement.dataset.theme = nextTheme;
+  }, []);
+
+  const applyTheme = (next: "light" | "dark") => {
+    setTheme(next);
+    localStorage.setItem("theme", next);
+    document.documentElement.dataset.theme = next;
+  };
 
   // ✅ Save changes handler
   const handleSave = async (e: React.FormEvent) => {
@@ -123,6 +137,30 @@ const SettingsPage = () => {
           <hr className={styles.separator} />
 
           <form onSubmit={handleSave} className={styles.form}>
+            <div className={styles.themeRow}>
+              <label className={styles.label}>Theme</label>
+              <div className={styles.themeToggle}>
+                <button
+                  type="button"
+                  className={`${styles.themeBtn} ${
+                    theme === "light" ? styles.themeBtnActive : ""
+                  }`}
+                  onClick={() => applyTheme("light")}
+                >
+                  Light
+                </button>
+                <button
+                  type="button"
+                  className={`${styles.themeBtn} ${
+                    theme === "dark" ? styles.themeBtnActive : ""
+                  }`}
+                  onClick={() => applyTheme("dark")}
+                >
+                  Dark
+                </button>
+              </div>
+            </div>
+
             <label className={styles.label}>Full Name</label>
             <input
               type="text"

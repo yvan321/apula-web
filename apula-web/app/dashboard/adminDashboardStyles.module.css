@@ -6,7 +6,7 @@
 
 .container {
   padding: 24px;
-  background-color: #d9d9d9;
+  background-color: #eef2f6;
   min-height: 100vh;
 }
 
@@ -14,7 +14,7 @@
   background-color: #ffffff;
   padding: 24px;
   border-radius: var(--card-radius);
-  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  box-shadow: 0 6px 20px rgba(15, 23, 42, 0.08);
 }
 
 .pageTitle {
@@ -54,8 +54,11 @@
   display: flex;
   flex-direction: column;
   justify-content: center;
-  text-align: center;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.12);
+  text-align: left;
+  border: 2px solid #2b2b2b;
+  background: #141414;
+  color: #f5f5f5;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
   transition: transform 0.25s ease, box-shadow 0.25s ease;
 }
 
@@ -64,7 +67,7 @@
 .cardSuccess:hover,
 .cardInfo:hover {
   transform: translateY(-3px);
-  box-shadow: 0 10px 24px rgba(0,0,0,0.18);
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.14);
 }
 
 /* ================= ICON + NUMBER LAYOUT ================= */
@@ -72,58 +75,55 @@
 .cardTop {
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   gap: 10px;
   margin-bottom: 6px;
 }
 
 .cardIcon {
-  font-size: 30px;
+  font-size: 24px;
   opacity: 0.95;
+  color: inherit;
 }
 
 .cardLabel {
   font-size: 14px;
   font-weight: 600;
-  opacity: 0.95;
+  opacity: 0.9;
 }
 
 /* ================= TEXT ================= */
 
 .bigText {
-  font-size: 26px;
+  font-size: 22px;
   font-weight: 700;
 }
 
 .bigNumber {
-  font-size: 34px;
-  font-weight: 800;
+  font-size: 30px;
+  font-weight: 700;
 }
 
-/* ================= COLORWAY (FROM FIRST CARDS) ================= */
+/* ================= CARD COLORWAY ================= */
 
-/* Blue – weather / neutral */
 .card {
-  background: linear-gradient(135deg, #01558e, #85c1e9);
-  color: #ffffff;
+  border-color: #2b6cb0;
+  box-shadow: 0 8px 24px rgba(43, 108, 176, 0.2);
 }
 
-/* Orange – time / info */
 .cardInfo {
-  background: linear-gradient(135deg, #f3ae2f, #e47119);
-  color: #ffffff;
+  border-color: #e67e22;
+  box-shadow: 0 8px 24px rgba(230, 126, 34, 0.2);
 }
 
-/* Red – critical fire */
 .cardCritical {
-  background: linear-gradient(135deg, #e47119, #cc0000);
-  color: #ffffff;
+  border-color: #d12c2c;
+  box-shadow: 0 8px 24px rgba(209, 44, 44, 0.2);
 }
 
-/* Green – available / responders */
 .cardSuccess {
-  background: linear-gradient(135deg, #219350, #27ae60);
-  color: #ffffff;
+  border-color: #22a06b;
+  box-shadow: 0 8px 24px rgba(34, 160, 107, 0.2);
 }
 
 /* Weather override */
@@ -207,12 +207,90 @@
 /* Chart area scales properly */
 .chartContainer {
   width: 100%;
-  height: 300px;
+  height: 320px;
   margin-top: 16px;
   background: #ffffff;
   border-radius: 14px;
-  border: 1px solid #c8e6c9;
-  padding: 10px;
+  border: 1px solid #e5e7eb;
+  padding: 14px;
+  box-sizing: border-box;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.chartContainer :global(.recharts-wrapper),
+.chartContainer :global(.recharts-surface) {
+  overflow: hidden;
+}
+
+.chartTitle {
+  margin: 0;
+  color: #1f2937;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.analyticsHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.yearSelect {
+  border: 1px solid #d1d5db;
+  background: #ffffff;
+  color: #374151;
+  padding: 8px 12px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.analyticsSection {
+  margin-top: 8px;
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  padding: 16px;
+  background: #f8fafc;
+}
+
+.analyticsTitle {
+  margin: 0;
+  color: #a30000;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.periodSwitcher {
+  margin-top: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.periodBtn {
+  border: 1px solid #d1d5db;
+  background: #ffffff;
+  color: #374151;
+  padding: 8px 14px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.periodBtnActive {
+  background: #a30000;
+  color: #ffffff;
+  border-color: #a30000;
+}
+
+.chartsGrid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 14px;
+  align-items: stretch;
 }
 
 /* ================= BUTTON ================= */
@@ -260,6 +338,10 @@
 
   .chartContainer {
     height: 240px; /* smaller chart for phones */
+  }
+
+  .chartsGrid {
+    grid-template-columns: 1fr;
   }
 
   .bigNumber {
