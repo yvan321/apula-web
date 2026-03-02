@@ -186,9 +186,10 @@ const latest = snap.docs
     const pending = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
 
     if (pending.length === 0) {
-      window.alert("No pending alerts found.");
-      return;
-    }
+setShowNoAlertModal(true);
+return;
+}
+
 
     setAlerts(pending);
   };
@@ -425,6 +426,9 @@ const latest = snap.docs
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [responders, teams, vehicles]);
+
+
+  const [showNoAlertModal, setShowNoAlertModal] = useState(false);
 
   // ---------------------------
   // UI
@@ -684,7 +688,33 @@ const latest = snap.docs
       </button>
     </div>
   </div>
+
+  
 )}
+{/* NO PENDING ALERT MODAL */}
+{showNoAlertModal && (
+
+  <div className={styles.modalOverlay}>
+    <div className={styles.modalContent}>
+      <h3 className={styles.modalTitle}>No Pending Alerts</h3>
+  <p style={{ marginBottom: 20, textAlign: "center", color: "black" }}>
+    There are currently no pending emergency alerts to dispatch.
+  </p>
+
+  <div className={styles.modalActions}>
+    <button
+      className={styles.closeBtn}
+      onClick={() => setShowNoAlertModal(false)}
+    >
+      Okay
+    </button>
+  </div>
+</div>
+```
+
+  </div>
+)}
+
 
     </div>
     

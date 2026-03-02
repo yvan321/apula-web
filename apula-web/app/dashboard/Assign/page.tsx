@@ -107,17 +107,20 @@ export default function AssignPage() {
   // ---------------- SAVE ASSIGNMENTS ----------------
   const saveAssignments = async () => {
     if (selectedResponderIds.size === 0) {
-      return alert("Select responders");
-    }
+setErrorMessage("Please select at least one responder.");
+return;
+}
+
 
     const selected = responders.filter(
       (r) => selectedResponderIds.has(r.id) && !isLeader(r.id)
     );
 
     if (selected.length === 0) {
-      alert("No valid responders selected.");
-      return;
-    }
+setErrorMessage("No valid responders selected.");
+return;
+}
+
 
     const teamMembersMap: Record<string, any[]> = {};
     const changedTeamIds = new Set<string>();
@@ -190,6 +193,9 @@ export default function AssignPage() {
     setShowSuccessModal(true);
     setTimeout(() => setShowSuccessModal(false), 2000);
   };
+
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
 
   // ---------------- UI ----------------
   return (
@@ -267,7 +273,7 @@ export default function AssignPage() {
                 checked={selectAll}
                 onChange={toggleSelectAll}
               />{" "}
-              Select All (except leaders)
+              Select All
             </label>
 
             <table className={styles.responderTable}>
@@ -331,9 +337,31 @@ export default function AssignPage() {
 
       {showSuccessModal && (
         <div className={styles.modalOverlay}>
-          <div className={styles.successModal}>✔ Assignment Updated</div>
+          <div className={styles.successModal}>✔ Member Assigned Successfully!</div>
         </div>
       )}
+
+     {errorMessage && (
+  <div className={styles.noticeOverlay}>
+    <div className={styles.noticeBox}>
+      <h3 className={styles.noticeTitle}>Notice</h3>
+
+      <p className={styles.noticeMessage}>
+        {errorMessage}
+      </p>
+
+      <div className={styles.noticeActions}>
+        <button
+          className={styles.closeBtn}
+          onClick={() => setErrorMessage(null)}
+        >
+          Okay
+        </button>
+      </div>
+    </div>
+  </div>
+)}
+
     </div>
   );
 }

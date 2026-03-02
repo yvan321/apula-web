@@ -35,6 +35,8 @@ const AlertDispatchModal = () => {
   const [showViewModal, setShowViewModal] = useState(false);
   const [previewAlert, setPreviewAlert] = useState<any>(null);
   const [showAlertPreviewModal, setShowAlertPreviewModal] = useState(false);
+  const [noticeMessage, setNoticeMessage] = useState<string | null>(null);
+const [showSuccessDispatch, setShowSuccessDispatch] = useState(false);
   const [previewImageCandidates, setPreviewImageCandidates] = useState<string[]>([]);
   const [previewImageIndex, setPreviewImageIndex] = useState(0);
   const [previewImageFailed, setPreviewImageFailed] = useState(false);
@@ -89,7 +91,8 @@ const AlertDispatchModal = () => {
     );
 
   if (!latest) {
-    alert("No dispatch record found for this team.");
+    setNoticeMessage("No dispatch record found for this team.");
+
     return;
   }
 
@@ -229,6 +232,9 @@ const groupedList = teams
     if (statuses.some((s) => s === "Available")) status = "Available";
     if (statuses.every((s) => s === "Dispatched")) status = "Dispatched";
 
+
+
+
     return {
       team: team.teamName,
       vehicle,
@@ -256,7 +262,8 @@ const groupedList = teams
     const available = group.responders.filter((r: any) => r.status === "Available");
 
     if (available.length === 0) {
-      alert("No available responders in this team.");
+      setNoticeMessage("No available responders in this team.");
+
       return;
     }
 
@@ -363,9 +370,12 @@ const groupedList = teams
 
       setShowModal(false);
       setDispatchStep(1);
+      setShowSuccessDispatch(true);
+setTimeout(() => setShowSuccessDispatch(false), 2500);
     } catch (err) {
       console.error(err);
-      alert("Dispatch failed.");
+      setNoticeMessage("Dispatch failed. Please try again.");
+
     }
   };
 
@@ -422,7 +432,8 @@ const groupedList = teams
     className={styles.viewBtn}
     onClick={() => {
       if (!a.snapshotUrl) {
-        alert("No snapshot available.");
+        setNoticeMessage("No snapshot available for this alert.");
+
         return;
       }
 
@@ -670,6 +681,32 @@ const groupedList = teams
     </div>
   </div>
 )}
+
+{noticeMessage && (
+
+  <div className={styles.modalOverlay}>
+    <div className={styles.noticeBox}>
+      <h3 className={styles.modalTitle}>Notice</h3>
+
+```
+  <p className={styles.noticeMessage}>
+    {noticeMessage}
+  </p>
+
+  <div className={styles.noticeActions}>
+    <button
+      className={styles.closeBtn}
+      onClick={() => setNoticeMessage(null)}
+    >
+      OK
+    </button>
+  </div>
+</div>
+```
+
+  </div>
+)}
+
 
     </div>
   );

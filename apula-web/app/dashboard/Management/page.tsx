@@ -154,6 +154,7 @@ export default function TeamVehiclePage() {
     setNewTeamName("");
     setSelectedLeader("");
     setShowAddTeamModal(false);
+    setSuccessMessage("Team created successfully.");
   } catch (err) {
     console.error(err);
     alert("Error creating team");
@@ -185,6 +186,7 @@ export default function TeamVehiclePage() {
       setVehiclePlate("");
       setVehicleTeam("");
       setShowAddVehicleModal(false);
+      setSuccessMessage("Vehicle added successfully.");
     } catch (err) {
       console.error(err);
       alert("Error adding vehicle");
@@ -263,17 +265,22 @@ export default function TeamVehiclePage() {
 
     await batch.commit();
     setEditingTeam(null);
+    setSuccessMessage("Team updated successfully.");
   } catch (err) {
     console.error(err);
     alert("Error updating team");
   }
 };
 
-
+// DELETE CONFIRM MODAL STATE
+const [confirmDelete, setConfirmDelete] = useState<{
+  type: "team" | "vehicle";
+  id: string;
+} | null>(null);
 
   // Delete team
   const deleteTeam = async (teamId: string) => {
-    if (!confirm("Delete this team? This will remove team assignments from users.")) return;
+
     try {
       // find users assigned to this team (by teamId)
       const q = query(collection(db, "users"), where("teamId", "==", teamId));
@@ -353,6 +360,7 @@ export default function TeamVehiclePage() {
 
     await batch.commit();
     setEditingVehicle(null);
+    setSuccessMessage("Vehicle updated successfully.");
   } catch (err) {
     console.error(err);
     alert("Failed to update vehicle");
@@ -364,7 +372,7 @@ export default function TeamVehiclePage() {
 
   // Delete vehicle
   const deleteVehicle = async (vehicleId: string) => {
-    if (!confirm("Delete this vehicle? This will remove vehicle assignment from users.")) return;
+   
     try {
       // find users assigned to this vehicle (by vehicleId)
       const q = query(collection(db, "users"), where("vehicleId", "==", vehicleId));
@@ -392,6 +400,27 @@ export default function TeamVehiclePage() {
     }
   };
 
+const handleConfirmDelete = async () => {
+if (!confirmDelete) return;
+
+try {
+if (confirmDelete.type === "team") {
+await deleteTeam(confirmDelete.id);
+setSuccessMessage("Team deleted successfully.");
+} else {
+await deleteVehicle(confirmDelete.id);
+setSuccessMessage("Vehicle deleted successfully.");
+}
+} catch (e) {
+alert("Delete failed. Check connection.");
+}
+
+setConfirmDelete(null);
+};
+
+
+
+const [successMessage, setSuccessMessage] = useState<string | null>(null);
   // ------------------------------------------
   // Render
   // ------------------------------------------
@@ -481,7 +510,7 @@ export default function TeamVehiclePage() {
                           </button>
 
                           <button
-                            onClick={() => deleteTeam(team.id)}
+                            onClick={() => setConfirmDelete({ type: "team", id: team.id })}
                             style={{ padding: "6px 10px", borderRadius: 6, border: "none", background: "#dc3545", color: "#fff", cursor: "pointer" }}
                           >
                             Delete
@@ -548,7 +577,7 @@ export default function TeamVehiclePage() {
                         </button>
 
                         <button
-                          onClick={() => deleteVehicle(v.id)}
+                          onClick={() => setConfirmDelete({ type: "vehicle", id: v.id })}
                           style={{ padding: "6px 10px", borderRadius: 6, border: "none", background: "#dc3545", color: "#fff", cursor: "pointer" }}
                         >
                           Delete
@@ -709,8 +738,73 @@ export default function TeamVehiclePage() {
               </button>
             </div>
           </div>
+          
         </div>
+
+        
       )}
+      {/* CONFIRM DELETE MODAL */}
+{confirmDelete && (
+
+  <div className={styles.modalOverlay}>
+    <div className={styles.modalContent}>
+      <h3 className={styles.modalTitle}>Confirm Delete</h3>
+
+  <p style={{ marginBottom: 20, textAlign: "center", color: "black" }}>
+    Are you sure you want to delete this{" "}
+    <b>{confirmDelete.type === "team" ? "Team" : "Vehicle"}</b>?
+
+    This action cannot be undone.
+  </p>
+
+  <div className={styles.modalActions}>
+    <button
+      className={styles.saveBtn}
+      style={{ background: "#dc3545" }}
+      onClick={handleConfirmDelete}
+    >
+      Yes, Delete
+    </button>
+
+    <button
+      className={styles.closeBtn}
+      onClick={() => setConfirmDelete(null)}
+    >
+      Cancel
+    </button>
+  </div>
+</div>
+
+
+  </div>
+  
+)}
+{/* SUCCESS MODAL */}
+{successMessage && (
+
+  <div className={styles.modalOverlay}>
+    <div className={styles.modalContent}>
+      <h3 className={styles.modalTitle}>Success</h3>
+
+  <p style={{ marginBottom: 20, textAlign: "center", color: "black" }}>
+    {successMessage}
+  </p>
+
+  <div className={styles.modalActions}>
+    <button
+      className={styles.saveBtn}
+      onClick={() => setSuccessMessage(null)}
+    >
+      Okay
+    </button>
+  </div>
+</div>
+
+
+  </div>
+)}
+
+
     </div>
   );
 }

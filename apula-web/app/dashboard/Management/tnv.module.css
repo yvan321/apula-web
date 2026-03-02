@@ -111,6 +111,7 @@
 .dataTable td {
   padding: 10px;
   border-bottom: 1px solid #eee;
+  color: black;
 }
 
 /* STATUS COLORS */
@@ -196,6 +197,7 @@
   font-weight: 700;
   color: #800000;
   margin-bottom: 15px;
+  text-align: center;
 }
 
 /* ============================= */

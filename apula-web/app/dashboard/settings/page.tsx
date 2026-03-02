@@ -20,11 +20,15 @@ const SettingsPage = () => {
   const [name, setName] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false); // set to false since loading is disabled
+
+  // ❌ THEME STATE (COMMENTED OUT USAGE BELOW)
   const [theme, setTheme] = useState<"light" | "dark">("dark");
+
   const router = useRouter();
 
-  // ✅ Protect page & load user data
+  // ❌ AUTH PROTECTION + USER DATA LOADING (COMMENTED OUT)
+  /*
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (!user) {
@@ -50,19 +54,27 @@ const SettingsPage = () => {
 
     return () => unsubscribe();
   }, [router]);
+  */
 
+  // ❌ THEME LOADING FROM LOCAL STORAGE (COMMENTED OUT)
+  /*
   useEffect(() => {
     const stored = localStorage.getItem("theme");
-    const nextTheme = stored === "light" || stored === "dark" ? stored : "dark";
+    const nextTheme =
+      stored === "light" || stored === "dark" ? stored : "dark";
     setTheme(nextTheme);
     document.documentElement.dataset.theme = nextTheme;
   }, []);
+  */
 
+  // ❌ APPLY THEME FUNCTION (COMMENTED OUT)
+  /*
   const applyTheme = (next: "light" | "dark") => {
     setTheme(next);
     localStorage.setItem("theme", next);
     document.documentElement.dataset.theme = next;
   };
+  */
 
   // ✅ Save changes handler
   const handleSave = async (e: React.FormEvent) => {
@@ -85,13 +97,9 @@ const SettingsPage = () => {
     }
 
     try {
-      // 🔹 Update display name in Firebase Auth
       await updateProfile(user, { displayName: name });
-
-      // 🔹 Update Firestore name
       await updateDoc(doc(db, "users", user.uid), { name });
 
-      // 🔹 Update password if provided
       if (password) {
         await updatePassword(user, password);
       }
@@ -105,8 +113,8 @@ const SettingsPage = () => {
     }
   };
 
-
-  
+  // ❌ LOADING SCREEN (COMMENTED OUT)
+  /*
   if (loading) {
     return (
       <div className="flex justify-center items-center h-screen text-lg">
@@ -114,22 +122,22 @@ const SettingsPage = () => {
       </div>
     );
   }
+  */
 
-
-  
   return (
     <div>
       <AdminHeader />
-      {/* 🔔 Bell Icon at top-right */}
+
+      {/* 🔔 Bell Icon */}
       <div style={{ position: "absolute", top: 20, right: 30, zIndex: 50 }}>
         <AlertBellButton />
       </div>
 
-      {/* 🚨 Alert Dispatch Modal (opens when bell is clicked) */}
+      {/* 🚨 Alert Dispatch Modal */}
       <AlertDispatchModal />
 
       <div className={styles.container}>
-        <div data-aos="fade-up" className={styles.contentSection}>
+        <div className={styles.contentSection}>
           <div className={styles.headerRow}>
             <h2 className={styles.pageTitle}>Account Settings</h2>
           </div>
@@ -137,6 +145,8 @@ const SettingsPage = () => {
           <hr className={styles.separator} />
 
           <form onSubmit={handleSave} className={styles.form}>
+
+            {/* ❌ THEME TOGGLE (COMMENTED OUT)
             <div className={styles.themeRow}>
               <label className={styles.label}>Theme</label>
               <div className={styles.themeToggle}>
@@ -160,6 +170,7 @@ const SettingsPage = () => {
                 </button>
               </div>
             </div>
+            */}
 
             <label className={styles.label}>Full Name</label>
             <input

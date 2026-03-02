@@ -191,6 +191,11 @@
   padding: 0.9rem 1rem;
   text-align: left;
   border-bottom: 1px solid #eee;
+  
+}
+
+.userTable tbody tr {
+  color: black;
 }
 
 .userTable tbody tr:hover {
@@ -440,18 +445,20 @@
 .closeBtn {
   display: block;
   width: 100%;
-  background-color: var(--color-red);
-  color: white;
+  background-color: rgb(255, 255, 255);
+  color: black;
   border: none;
   border-radius: 6px;
   padding: 0.6rem;
   margin-top: 1rem;
   cursor: pointer;
   transition: all 0.3s ease;
+  border: #333 solid 2px  ;
 }
 
 .closeBtn:hover {
   background-color: #b71c1c;
+  color: white;
 }
 
 .saveBtn {
