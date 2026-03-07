@@ -8,6 +8,15 @@ import { collection, query, where, onSnapshot } from "firebase/firestore";
 
 const AlertBellButton = () => {
   const [alertCount, setAlertCount] = useState(0);
+  const [audio, setAudio] = useState<HTMLAudioElement | null>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+
+  // 🔊 Initialize alarm sound
+  useEffect(() => {
+    const alarm = new Audio("/sounds/fire_alarm.mp3");
+    alarm.loop = true;
+    setAudio(alarm);
+  }, []);
 
   // 🔥 Real-time listen to pending alerts
   useEffect(() => {
@@ -22,6 +31,22 @@ const AlertBellButton = () => {
 
     return () => unsub();
   }, []);
+
+  // 🔊 Play sound if alerts exist
+  useEffect(() => {
+    if (!audio) return;
+
+    if (alertCount > 0 && !isPlaying) {
+      audio.play().catch(() => {});
+      setIsPlaying(true);
+    }
+
+    if (alertCount === 0 && isPlaying) {
+      audio.pause();
+      audio.currentTime = 0;
+      setIsPlaying(false);
+    }
+  }, [alertCount, audio]);
 
   const handleClick = () => {
     window.dispatchEvent(new Event("open-alert-dispatch"));

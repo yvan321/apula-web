@@ -21,16 +21,9 @@ const NotificationPage: React.FC = () => {
   const [showModal, setShowModal] = useState(false);
   const [filter, setFilter] = useState("all");
 
-  // 🔊 SOUND ALERT STATES
-  const [audio, setAudio] = useState<HTMLAudioElement | null>(null);
-  const [isPlaying, setIsPlaying] = useState(false);
 
-  // 🎵 Initialize sound alert (looping)
-  useEffect(() => {
-    const audioElement = new Audio("/sounds/fire_alarm.mp3"); // make sure file is in public/sounds/
-    audioElement.loop = true;
-    setAudio(audioElement);
-  }, []);
+
+
 
   // 🔥 Real-time listener for alerts/notifications
   useEffect(() => {
@@ -48,23 +41,7 @@ const NotificationPage: React.FC = () => {
     return () => unsubscribe();
   }, []);
 
-  // 🔊 SOUND LOGIC — Play when unread exists, stop when all read
-  useEffect(() => {
-    if (!audio) return;
-
-    const hasUnread = notifications.some((n) => !n.read);
-
-    if (hasUnread && !isPlaying) {
-      audio.play().catch(() => {});
-      setIsPlaying(true);
-    }
-
-    if (!hasUnread && isPlaying) {
-      audio.pause();
-      audio.currentTime = 0;
-      setIsPlaying(false);
-    }
-  }, [notifications, audio]);
+ 
 
   // 📨 Open modal (and mark as read)
   const handleOpenModal = async (notif: any) => {

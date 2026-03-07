@@ -111,7 +111,9 @@ const ReportPage = () => {
 
   // ================= PDF (ONE REPORT) =================
   const downloadSingleReportPDF = (report) => {
-    const doc = new jsPDF();
+    const doc = new jsPDF({
+  orientation: "landscape",
+});
     let y = 20;
 
     doc.setFontSize(18);
@@ -242,7 +244,7 @@ const ReportPage = () => {
           </div>
         </div>
 
-        {/* MODAL */}
+   
         {/* MODAL */}
 {selectedReport && (
   <div className={styles.modalOverlay}>
