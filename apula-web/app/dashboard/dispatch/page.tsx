@@ -58,6 +58,9 @@ const DispatchPage: React.FC = () => {
   const [selectedDispatch, setSelectedDispatch] = useState<any>(null);
 const [showDispatchInfoModal, setShowDispatchInfoModal] = useState(false);
 
+const [modalMessage, setModalMessage] = useState("");
+const [showMessageModal, setShowMessageModal] = useState(false);
+
 
 const viewDispatchInfo = async (teamName: string) => {
   const snap = await getDocs(
@@ -76,7 +79,8 @@ const latest = snap.docs
 
 
   if (!latest) {
-    alert("No dispatch record found for this team.");
+    setModalMessage("No dispatch record found for this team.");
+setShowMessageModal(true);
     return;
   }
 
@@ -351,7 +355,9 @@ return;
     const availableIds = group.responders.filter((r: any) => r.status === "Available").map((r: any) => r.id);
 
     if (availableIds.length === 0) {
-      return alert("No available responders to dispatch.");
+      setModalMessage("No available responders to dispatch.");
+setShowMessageModal(true);
+return;
     }
 
     setPendingDispatchIds(new Set(availableIds));
@@ -670,16 +676,30 @@ return;
 <hr className={styles.divider} />
 
 <div className={styles.section}>
-  <h4>Responders:</h4>
-  <ul className={styles.responderList}>
-    {selectedDispatch.responders?.map((r: any) => (
-      <li key={r.id}>
-        <strong>{r.name}</strong> — {r.teamName}  
-        <br />
-        <small>{r.contact} | {r.email}</small>
-      </li>
-    ))}
-  </ul>
+  <h4>Team Dispatched:</h4>
+
+{selectedDispatch.responders?.length > 0 && (
+  <>
+    
+    {(() => {
+  const teamName = selectedDispatch.responders?.[0]?.teamName;
+  const team = teams.find(t => t.teamName === teamName);
+
+  return (
+    <>
+      <p><strong>Team:</strong> {teamName}</p>
+
+      <h4 style={{ marginTop: 10 }}>Members:</h4>
+      <ul className={styles.responderList}>
+        {team?.members?.map((m: any) => (
+          <li key={m.id}>{m.name}</li>
+        ))}
+      </ul>
+    </>
+  );
+})()}
+  </>
+)}
 </div>
 
 
@@ -712,6 +732,27 @@ return;
 </div>
 ```
 
+  </div>
+)}
+
+{showMessageModal && (
+  <div className={styles.modalOverlay}>
+    <div className={styles.modalContent}>
+      <h3 className={styles.modalTitle}>Notice</h3>
+
+      <p style={{ marginBottom: 20, textAlign: "center", color: "black" }}>
+        {modalMessage}
+      </p>
+
+      <div className={styles.modalActions}>
+        <button
+          className={styles.closeBtn}
+          onClick={() => setShowMessageModal(false)}
+        >
+          Okay
+        </button>
+      </div>
+    </div>
   </div>
 )}
 
