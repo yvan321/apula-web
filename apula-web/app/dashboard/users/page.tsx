@@ -33,6 +33,8 @@ export default function UsersPage() {
   const [loading, setLoading] = useState(true);
   const [showSuccess, setShowSuccess] = useState(false);
 
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
 
   useEffect(() => {
     const fetchUsers = async () => {
@@ -329,7 +331,7 @@ export default function UsersPage() {
       setTimeout(() => setShowSuccess(false), 2000);
     } catch (err) {
       console.error("Error updating status:", err);
-      alert("Failed to update status.");
+      setErrorMessage("Failed to update status.");
     }
 
     setEditTarget(null);
@@ -353,6 +355,22 @@ export default function UsersPage() {
     <div className={styles.successModal}>
       <h3>Status Updated!</h3>
       <p>The responder’s status has been successfully saved.</p>
+    </div>
+  </div>
+)}
+
+{errorMessage && (
+  <div className={styles.successOverlay}>
+    <div className={styles.successModal}>
+      <h3>Error</h3>
+      <p>{errorMessage}</p>
+
+      <button
+        className={styles.closeBtn}
+        onClick={() => setErrorMessage(null)}
+      >
+        Close
+      </button>
     </div>
   </div>
 )}
