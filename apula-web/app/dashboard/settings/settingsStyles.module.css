@@ -1,28 +1,28 @@
 .container {
   padding: 24px;
-  background-color: var(--app-bg);
+  background-color: #d9d9d9;
   min-height: 100vh;
 }
 
 .contentSection {
-  background-color: var(--panel-bg);
-  color: var(--panel-text);
+  background-color: #ffffff;
+  color: #111827;
   padding: 24px;
-  border-radius: 12px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.18);
-  max-width: 500px;
+  border-radius: 14px;
+  box-shadow: 0 6px 20px rgba(15, 23, 42, 0.08);
+  max-width: 520px;
   margin: 0 auto;
-  border: 1px solid var(--panel-border);
 }
 
 .headerRow {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 12px;
 }
 
 .pageTitle {
-  color: var(--color-red, #ff4d4f);
+  color: #a30000;
   font-size: 24px;
   font-weight: 700;
   margin: 0;
@@ -32,38 +32,45 @@
   margin-top: 0.5rem;
   margin-bottom: 1.5rem;
   border: 0;
-  border-top: 1px solid #ccc;
+  border-top: 1px solid #d1d5db;
 }
 
 /* ---------- FORM ---------- */
 .form {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 14px;
 }
 
 .label {
   font-size: 14px;
-  color: var(--muted-text);
-  font-weight: 500;
+  color: #374151;
+  font-weight: 600;
 }
 
 .input {
-  padding: 10px 14px;
-  border: 1px solid var(--input-border);
-  border-radius: 8px;
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid #d1d5db;
+  border-radius: 10px;
   font-size: 14px;
   outline: none;
-  transition: border-color 0.2s;
-  background: var(--input-bg);
-  color: var(--panel-text);
+  transition: all 0.25s ease;
+  background: #ffffff;
+  color: #111827;
+  box-sizing: border-box;
 }
 
 .input:focus {
-  border-color: #ff4d4f;
-  box-shadow: 0 0 0 2px rgba(255, 77, 79, 0.1);
+  border-color: #a30000;
+  box-shadow: 0 0 0 3px rgba(163, 0, 0, 0.1);
 }
 
+.input::placeholder {
+  color: #9ca3af;
+}
+
+/* OPTIONAL THEME SECTION */
 .themeRow {
   display: flex;
   flex-direction: column;
@@ -73,16 +80,23 @@
 .themeToggle {
   display: inline-flex;
   gap: 8px;
+  flex-wrap: wrap;
 }
 
 .themeBtn {
-  border: 1px solid var(--input-border);
-  background: var(--input-bg);
-  color: var(--panel-text);
+  border: 1px solid #d1d5db;
+  background: #ffffff;
+  color: #374151;
   padding: 8px 14px;
   border-radius: 999px;
   font-weight: 600;
   cursor: pointer;
+  transition: all 0.25s ease;
+}
+
+.themeBtn:hover {
+  border-color: #a30000;
+  color: #a30000;
 }
 
 .themeBtnActive {
@@ -91,20 +105,23 @@
   border-color: #a30000;
 }
 
+/* SAVE BUTTON */
 .saveBtn {
-  position: relative;
-  background: var(--color-red);
+  margin-top: 18px;
+  background: #a30000;
   color: white;
-  border: none;
-  padding: 10px 18px;
-  border-radius: 8px;
-  font-weight: 600;
+  border: 2px solid #a30000;
+  padding: 12px 18px;
+  border-radius: 10px;
   cursor: pointer;
+  font-weight: 600;
+  width: 100%;
+  position: relative;
   overflow: hidden;
-  z-index: 1;
   transition: color 0.3s ease;
 }
 
+/* sliding background */
 .saveBtn::before {
   content: "";
   position: absolute;
@@ -112,9 +129,15 @@
   left: -100%;
   width: 100%;
   height: 100%;
-  background: #d63031;
-  transition: all 0.4s ease;
-  z-index: -1;
+  background: white;
+  transition: left 0.35s ease;
+  z-index: 0;
+}
+
+/* text above animation */
+.saveBtn span {
+  position: relative;
+  z-index: 1;
 }
 
 .saveBtn:hover::before {
@@ -122,16 +145,41 @@
 }
 
 .saveBtn:hover {
-  color: #fff;
+  color: #a30000;
 }
 
+/* ---------- RESPONSIVE ---------- */
+@media (max-width: 768px) {
+  .container {
+    padding: 16px;
+  }
+
+  .contentSection {
+    max-width: 100%;
+    padding: 20px;
+  }
+}
 
 @media (max-width: 600px) {
+  .container {
+    padding: 14px;
+  }
+
   .contentSection {
     padding: 18px;
+    border-radius: 12px;
   }
 
   .pageTitle {
-    font-size: 20px;
+    font-size: 22px;
+  }
+
+  .input {
+    font-size: 14px;
+    padding: 11px 12px;
+  }
+
+  .saveBtn {
+    width: 100%;
   }
 }

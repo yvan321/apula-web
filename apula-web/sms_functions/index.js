@@ -1,14 +1,12 @@
 /**
  * sms_functions/index.js
  *
- * Firebase Functions (Gen 2) - PhilSMS integration
+ * Gen2 Firebase Functions + PhilSMS
  *
- * - Sends SMS to responders who opted in (users.smsOptIn === true) using users.contact
- * - Trigger A: when a NEW dispatch doc is CREATED
- * - Trigger B: when a dispatch doc is UPDATED and status changes to "Dispatched"
- * - Has a manual HTTPS test endpoint: testSendSms
- *
- * SMS uses: dispatch.userAddress (or fallback: dispatch.alert?.userAddress, dispatch.alertLocation)
+ * ✅ Prevents credit drain:
+ *  - per-dispatch per-responder dedupe using subcollection smsLogs
+ *  - optional global kill switch SMS_ENABLED
+ *  - smsNotified only after at least one SMS attempt (configurable)
  */
 
 const admin = require("firebase-admin");
@@ -24,7 +22,25 @@ admin.initializeApp();
 const PHILSMS_TOKEN = defineSecret("PHILSMS_TOKEN");
 const PHILSMS_SENDER_ID = defineSecret("PHILSMS_SENDER_ID");
 
+// Keep your endpoint (change if you want)
 const PHILSMS_ENDPOINT = "https://dashboard.philsms.com/api/v3/sms/send";
+
+/**
+ * ✅ Kill switch (no credits spent when false)
+ * Set in firebase functions config / env:
+ * SMS_ENABLED=false
+ *
+ * In Gen2 you can set env in firebase.json or CLI.
+ */
+const SMS_ENABLED = process.env.SMS_ENABLED !== "false"; // default true
+
+/** Safe logger */
+function logJson(level, label, obj) {
+  const text = `${label} ${JSON.stringify(obj)}`;
+  if (level === "error") logger.error(text);
+  else if (level === "warn") logger.warn(text);
+  else logger.info(text);
+}
 
 /** Normalize PH numbers to 639xxxxxxxxx (no +) */
 function normalizePHMobile(input) {
@@ -41,44 +57,78 @@ function normalizePHMobile(input) {
   return null;
 }
 
-/** Remove non-ascii + compress whitespace (prevents SMS gateway failures) */
-function toGsmPlain(text) {
-  return String(text || "")
-    .replace(/[^\x00-\x7F]/g, "") // strip emoji/unicode
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
-/** Safe logger helper (never pass objects directly) */
-function logJson(level, label, obj) {
-  const text = `${label} ${JSON.stringify(obj)}`;
-  if (level === "error") logger.error(text);
-  else logger.info(text);
-}
-
-/** Build address (your request: alert->userAddress) with safe fallbacks */
+/** Prefer userAddress, fallback to alertLocation */
 function getFireAddress(dispatch) {
   return (
-    dispatch?.alert?.userAddress ||
     dispatch?.userAddress ||
-    dispatch?.alertLocation || // fallback if you still store this
+    dispatch?.alertAddress ||
+    dispatch?.alertLocation ||
+    dispatch?.location ||
     "Unknown location"
   );
 }
 
-/** Send SMS via PhilSMS */
-async function sendPhilSms({ token, senderId, recipients, message }) {
+/** Remove emoji / non-ascii */
+function stripNonAscii(s) {
+  return String(s || "").replace(/[^\x00-\x7F]/g, "").trim();
+}
+
+/** SHORTEN to reduce multipart risk (helps deliverability + less credits) */
+function shorten(s, max) {
+  s = stripNonAscii(s || "");
+  if (s.length <= max) return s;
+  return s.slice(0, max - 3).trimEnd() + "...";
+}
+
+/** Build compact SMS (try to keep sms_count=1) */
+function buildDispatchSmsText(dispatch, responderName = "Responder") {
+  const name = shorten(responderName, 16) || "Responder";
+  const alertType = shorten(dispatch?.alertType || "Alert", 22);
+  const address = shorten(getFireAddress(dispatch), 45);
+
+  // ~ under 160 chars most of the time
+  return `APULA DISPATCH\nHi ${name}\nTo: ${address}\nType: ${alertType}`;
+}
+
+/** Extract responder IDs (supports multiple shapes) */
+function extractResponderIds(respondersRaw) {
+  const ids = respondersRaw
+    .map((r) => r?.id || r?.uid || r?.responderId || r?.userId)
+    .filter(Boolean);
+  return [...new Set(ids)];
+}
+
+/** Fetch responder user docs referenced by dispatch.responders */
+async function getResponderUsersFromDispatch(dispatch, dispatchIdForLogs = "") {
+  const respondersRaw = Array.isArray(dispatch?.responders) ? dispatch.responders : [];
+
+  logJson("info", `Dispatch ${dispatchIdForLogs} responders raw:`, respondersRaw);
+
+  const ids = extractResponderIds(respondersRaw);
+  logJson("info", `Dispatch ${dispatchIdForLogs} responder IDs:`, ids);
+
+  if (ids.length === 0) return [];
+
+  const db = admin.firestore();
+  const snaps = await Promise.all(ids.map((uid) => db.collection("users").doc(uid).get()));
+
+  const existsMap = snaps.map((s, i) => ({ id: ids[i], exists: s.exists }));
+  logJson("info", `Dispatch ${dispatchIdForLogs} user-doc exists:`, existsMap);
+
+  return snaps.filter((s) => s.exists).map((s) => ({ id: s.id, ...s.data() }));
+}
+
+/** Send SMS via PhilSMS (FORCED plain + ASCII) */
+async function sendPhilSms({ token, senderId, recipient, message }) {
   const sid = String(senderId || "").trim();
+  const safeMessage = stripNonAscii(message);
 
-  // We send GSM-safe text => plain
   const payload = {
-    recipient: recipients.join(","),
+    recipient: String(recipient),
+    sender_id: sid, // you can remove if you want (some carriers filter alphanumeric sender)
     type: "plain",
-    message,
+    message: safeMessage,
   };
-
-  // include sender_id only if set
-  if (sid) payload.sender_id = sid;
 
   const res = await axios.post(PHILSMS_ENDPOINT, payload, {
     headers: {
@@ -94,78 +144,142 @@ async function sendPhilSms({ token, senderId, recipients, message }) {
 }
 
 /**
- * Send personalized SMS to each opted-in responder in dispatch.responders[]
- * (one SMS per responder so we can say "Hi {name}")
+ * ✅ DEDUPE: check/set per responder log
+ * dispatches/{dispatchId}/smsLogs/{uid}
  */
-async function sendDispatchSmsToResponders(dispatch, dispatchId) {
-  const responders = Array.isArray(dispatch?.responders) ? dispatch.responders : [];
-  if (responders.length === 0) {
-    logger.info("No responders in dispatch doc. Skipping SMS.");
-    return;
+function smsLogRef(dispatchId, uid) {
+  return admin.firestore().collection("dispatches").doc(dispatchId).collection("smsLogs").doc(uid);
+}
+
+/**
+ * Core routine: send SMS to all opted-in responders in a dispatch doc.
+ * ✅ credit-protected: never sends twice to same responder for same dispatch
+ */
+async function sendDispatchSmsToResponders(dispatchId, dispatch) {
+  if (!SMS_ENABLED) {
+    logger.warn(`SMS_ENABLED=false. Skipping all SMS for dispatch ${dispatchId}.`);
+    return { attempted: 0, sent: 0, skippedAlreadySent: 0 };
   }
 
-  const db = admin.firestore();
   const token = PHILSMS_TOKEN.value();
   const senderId = PHILSMS_SENDER_ID.value();
 
-  const alertType = toGsmPlain(dispatch?.alertType || "Alert");
-  const fireAddress = toGsmPlain(getFireAddress(dispatch));
-  const dispatchedBy = toGsmPlain(dispatch?.dispatchedBy || "Admin Panel");
+  const users = await getResponderUsersFromDispatch(dispatch, dispatchId);
+  if (users.length === 0) {
+    logger.warn(`Dispatch ${dispatchId}: no responder user docs found. SMS skipped.`);
+    return { attempted: 0, sent: 0, skippedAlreadySent: 0 };
+  }
 
-  // optional: avoid duplicates within same function run
-  const seen = new Set();
+  const candidates = users.map((u) => {
+    const normalized = normalizePHMobile(u?.contact);
+    return {
+      uid: u?.id,
+      name: u?.name || u?.email || "Responder",
+      role: u?.role,
+      smsOptIn: u?.smsOptIn,
+      contact: u?.contact,
+      normalized,
+    };
+  });
 
-  for (const r of responders) {
-    const uid = r?.id;
-    if (!uid || seen.has(uid)) continue;
-    seen.add(uid);
+  const opted = candidates.filter((c) => {
+    const role = String(c.role || "").trim().toLowerCase();
+    const optIn = c.smsOptIn === true || c.smsOptIn === "true";
+    return role === "responder" && optIn && !!c.normalized;
+  });
 
-    const snap = await db.collection("users").doc(uid).get();
-    if (!snap.exists) continue;
+  if (opted.length === 0) {
+    logger.warn(`Dispatch ${dispatchId}: no opted-in responders with valid numbers.`);
+    return { attempted: 0, sent: 0, skippedAlreadySent: 0 };
+  }
 
-    const user = snap.data();
+  let attempted = 0;
+  let sent = 0;
+  let skippedAlreadySent = 0;
 
-    // must be responder + opted-in
-    if (user?.role !== "responder" || user?.smsOptIn !== true || !user?.contact) continue;
+  for (const r of opted) {
+    // ✅ HARD DEDUPE: if already logged as SENT, skip (no credits spent)
+    const logRef = smsLogRef(dispatchId, r.uid);
+    const logSnap = await logRef.get();
 
-    const phone = normalizePHMobile(user.contact);
-    if (!phone) continue;
+    if (logSnap.exists && logSnap.data()?.sent === true) {
+      skippedAlreadySent++;
+      logger.info(`Dispatch ${dispatchId}: SKIP ${r.uid} already sent before.`);
+      continue;
+    }
 
-    const responderName = toGsmPlain(user?.name || "Responder");
+    // ✅ Create a "lock" first to avoid double-sends if function runs twice concurrently
+    // (best-effort; simple approach)
+    await logRef.set(
+      {
+        uid: r.uid,
+        to: r.normalized,
+        name: r.name,
+        sent: false,
+        status: "LOCKED",
+        lockedAt: admin.firestore.FieldValue.serverTimestamp(),
+      },
+      { merge: true }
+    );
 
-    // ✅ Your requested format using userAddress
-    const message = toGsmPlain(
-  `APULA DISPATCH
+    const smsText = buildDispatchSmsText(dispatch, r.name);
 
-Hi ${responderName},
-You have been dispatched to:
+    attempted++;
+    logger.info(`Dispatch ${dispatchId} -> sending SMS to ${r.normalized} (${r.name})`);
+    logger.info(`DISPATCH smsText:\n${smsText}`);
 
-${fireAddress}
+    try {
+      const result = await sendPhilSms({
+        token,
+        senderId,
+        recipient: r.normalized,
+        message: smsText,
+      });
 
-Alert Type: ${alertType}
-Dispatched By: ADMIN
+      logger.info(`PhilSMS HTTP status: ${result.httpStatus}`);
+      logJson("info", "PhilSMS raw response:", result.data);
 
-- APULA System`
-);
+      const ok = result?.httpStatus === 200 && result?.data?.status === "success";
 
-    logger.info(`Dispatch ${dispatchId} -> sending SMS to ${phone} (${responderName})`);
-    logger.info(`DISPATCH smsText: ${message}`);
+      await logRef.set(
+        {
+          sent: ok,
+          status: ok ? "SENT" : "FAILED",
+          httpStatus: result.httpStatus,
+          provider: "PhilSMS",
+          providerResponse: result.data,
+          payloadSent: result.payloadSent,
+          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        },
+        { merge: true }
+      );
 
-    const result = await sendPhilSms({
-      token,
-      senderId,
-      recipients: [phone],
-      message,
-    });
+      if (!ok) {
+        logger.error(`PhilSMS FAILED for ${r.normalized}`);
+        continue;
+      }
 
-    logJson("info", "PhilSMS payloadSent:", result.payloadSent);
-    logger.info(`PhilSMS HTTP status: ${result.httpStatus}`);
-    logJson("info", "PhilSMS raw response:", result.data);
+      sent++;
+      logger.info(`PhilSMS SENT OK to ${r.normalized}`);
+    } catch (err) {
+      const errData = err?.response?.data || err?.message || String(err);
 
-    if (result?.data?.status !== "success") {
-      logJson("error", "PhilSMS ERROR:", result.data);
+      await logRef.set(
+        {
+          sent: false,
+          status: "ERROR",
+          error: errData,
+          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        },
+        { merge: true }
+      );
+
+      logger.error(`PhilSMS ERROR for ${r.normalized}: ${JSON.stringify(errData)}`);
+      continue;
     }
   }
+
+  return { attempted, sent, skippedAlreadySent };
 }
 
 /**
@@ -178,23 +292,26 @@ exports.onDispatchCreatedSendSms = onDocumentCreated(
     region: "us-central1",
   },
   async (event) => {
-    const dispatchId = event.params.dispatchId;
-    const dispatch = event.data?.data();
+    try {
+      const dispatchId = event.params.dispatchId;
+      const dispatch = event.data?.data();
 
-    logger.info(`SMS TRIGGER FIRED (created): ${dispatchId}`);
+      logger.info(`SMS TRIGGER FIRED (created): ${dispatchId}`);
+      if (!dispatch) return;
 
-    if (!dispatch) {
-      logger.info("No dispatch data found. Skipping.");
-      return;
+      await sendDispatchSmsToResponders(dispatchId, dispatch);
+    } catch (err) {
+      logger.error(
+        "onDispatchCreatedSendSms crashed: " +
+          JSON.stringify(err?.response?.data || err?.message || String(err))
+      );
     }
-
-    await sendDispatchSmsToResponders(dispatch, dispatchId);
   }
 );
 
 /**
- * Trigger B: dispatch updated -> status changes to Dispatched
- * Prevent duplicates with smsNotified flag
+ * Trigger B: UPDATED -> status becomes Dispatched
+ * ✅ Prevent duplicates with smsNotified + per-responder logs
  */
 exports.onDispatchUpdatedSendSms = onDocumentUpdated(
   {
@@ -203,40 +320,52 @@ exports.onDispatchUpdatedSendSms = onDocumentUpdated(
     region: "us-central1",
   },
   async (event) => {
-    const dispatchId = event.params.dispatchId;
-    const before = event.data?.before?.data();
-    const after = event.data?.after?.data();
+    try {
+      const dispatchId = event.params.dispatchId;
+      const before = event.data?.before?.data();
+      const after = event.data?.after?.data();
+      if (!before || !after) return;
 
-    if (!before || !after) return;
+      const beforeStatus = before.status || "";
+      const afterStatus = after.status || "";
 
-    const beforeStatus = before.status || "";
-    const afterStatus = after.status || "";
+      // only when becomes Dispatched
+      if (!(beforeStatus !== "Dispatched" && afterStatus === "Dispatched")) return;
 
-    // Only when status transitions to Dispatched
-    if (!(beforeStatus !== "Dispatched" && afterStatus === "Dispatched")) return;
+      // dispatch-level guard
+      if (after.smsNotified === true) {
+        logger.info(`SMS already notified for dispatch: ${dispatchId}`);
+        return;
+      }
 
-    if (after.smsNotified === true) {
-      logger.info(`SMS already notified for dispatch: ${dispatchId}`);
-      return;
+      logger.info(`SMS TRIGGER FIRED (updated->Dispatched): ${dispatchId}`);
+
+      const stats = await sendDispatchSmsToResponders(dispatchId, after);
+
+      // ✅ only set smsNotified if we actually attempted anything
+      // (prevents marking notified when SMS_ENABLED=false or no candidates)
+      if (stats.attempted > 0) {
+        await event.data.after.ref.update({
+          smsNotified: true,
+          smsNotifiedAt: admin.firestore.FieldValue.serverTimestamp(),
+          smsStats: stats,
+        });
+        logger.info(`Dispatch ${dispatchId}: smsNotified flag set ✅`);
+      } else {
+        logger.warn(`Dispatch ${dispatchId}: no SMS attempted; smsNotified not set.`);
+      }
+    } catch (err) {
+      logger.error(
+        "onDispatchUpdatedSendSms crashed: " +
+          JSON.stringify(err?.response?.data || err?.message || String(err))
+      );
     }
-
-    logger.info(`SMS TRIGGER FIRED (updated->Dispatched): ${dispatchId}`);
-
-    await sendDispatchSmsToResponders(after, dispatchId);
-
-    // Mark as notified to prevent duplicates
-    await event.data.after.ref.update({
-      smsNotified: true,
-      smsNotifiedAt: admin.firestore.FieldValue.serverTimestamp(),
-    });
-
-    logger.info("smsNotified set to true");
   }
 );
 
 /**
  * Manual test endpoint:
- * https://us-central1-apula-36cee.cloudfunctions.net/testSendSms?to=09935573850
+ * https://us-central1-apula-36cee.cloudfunctions.net/testSendSms?to=09xxxxxxxxx
  */
 exports.testSendSms = onRequest(
   {
@@ -245,23 +374,28 @@ exports.testSendSms = onRequest(
   },
   async (req, res) => {
     try {
+      if (!SMS_ENABLED) {
+        return res.status(200).json({ ok: true, skipped: true, reason: "SMS_ENABLED=false" });
+      }
+
       const to = String(req.query.to || "").trim();
       if (!to) return res.status(400).json({ ok: false, error: "Missing ?to=" });
 
       const phone = normalizePHMobile(to);
       if (!phone) return res.status(400).json({ ok: false, error: "Invalid phone format" });
 
+      const msg = `APULA TEST\nHi Responder\nTime: ${new Date().toISOString()}`;
+
       const result = await sendPhilSms({
         token: PHILSMS_TOKEN.value(),
         senderId: PHILSMS_SENDER_ID.value(),
-        recipients: [phone],
-        message: "APULA TEST SMS",
+        recipient: phone,
+        message: msg,
       });
 
       return res.status(200).json({
         ok: true,
         normalized: phone,
-        payloadSent: result.payloadSent,
         httpStatus: result.httpStatus,
         philsms: result.data,
       });

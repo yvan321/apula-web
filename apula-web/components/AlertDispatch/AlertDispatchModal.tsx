@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import styles from "@/app/dashboard/dispatch/dispatch.module.css";
+import styles from "./alertDispatchModal.module.css";
 
 import {
   collection,
@@ -21,26 +21,33 @@ const AlertDispatchModal = () => {
   const [showModal, setShowModal] = useState(false);
 
   const [dispatchStep, setDispatchStep] = useState<1 | 2 | 3>(1);
+  const [activeTab, setActiveTab] = useState<"alerts" | "backup">("alerts");
 
   const [alerts, setAlerts] = useState<any[]>([]);
+  const [backupRequests, setBackupRequests] = useState<any[]>([]);
+
   const [selectedAlert, setSelectedAlert] = useState<any>(null);
+  const [selectedBackupRequest, setSelectedBackupRequest] = useState<any>(null);
 
   const [responders, setResponders] = useState<any[]>([]);
-  const [selectedResponderIds, setSelectedResponderIds] = useState<Set<string>>(new Set());
+  const [selectedResponderIds, setSelectedResponderIds] = useState<Set<string>>(
+    new Set(),
+  );
 
   const [teams, setTeams] = useState<any[]>([]);
   const [vehicles, setVehicles] = useState<any[]>([]);
 
-  const [selectedDispatch, setSelectedDispatch] = useState<any>(null);
-  const [showViewModal, setShowViewModal] = useState(false);
-  const [previewAlert, setPreviewAlert] = useState<any>(null);
-  const [showAlertPreviewModal, setShowAlertPreviewModal] = useState(false);
   const [noticeMessage, setNoticeMessage] = useState<string | null>(null);
-const [showSuccessDispatch, setShowSuccessDispatch] = useState(false);
-  const [previewImageCandidates, setPreviewImageCandidates] = useState<string[]>([]);
+
+  const [showAlertDetailsModal, setShowAlertDetailsModal] = useState(false);
+  const [previewAlert, setPreviewAlert] = useState<any>(null);
+  const [previewImageCandidates, setPreviewImageCandidates] = useState<
+    string[]
+  >([]);
   const [previewImageIndex, setPreviewImageIndex] = useState(0);
   const [previewImageFailed, setPreviewImageFailed] = useState(false);
 
+  /* GOOGLE DRIVE IMAGE HELPERS */
   const extractGoogleDriveFileId = (url: string): string | null => {
     const filePathMatch = url.match(/\/file\/d\/([^/]+)/);
     if (filePathMatch?.[1]) return filePathMatch[1];
@@ -74,196 +81,236 @@ const [showSuccessDispatch, setShowSuccessDispatch] = useState(false);
     ];
   };
 
-
-  const viewDispatchInfo = async (teamName: string) => {
-  const snap = await getDocs(
-    query(
-      collection(db, "dispatches"),
-      orderBy("timestamp", "desc")
-    )
-  );
-
-  const latest = snap.docs
-    .map(d => ({ id: d.id, ...d.data() }))
-    .find(d =>
-      d.status === "Dispatched" &&
-      d.responders?.some((r: any) => r.team === teamName)
-    );
-
-  if (!latest) {
-    setNoticeMessage("No dispatch record found for this team.");
-
-    return;
-  }
-
-  setSelectedDispatch(latest);
-  setShowViewModal(true);
-};
-
-
-
-  // ------------------------------------------------------------
-  // OPEN MODAL WHEN TRIGGERED FROM AlertBellButton
-  // ------------------------------------------------------------
+  /* OPEN MODAL */
   useEffect(() => {
     const openModal = () => {
       loadAlerts();
+      loadBackupRequests();
+
       setDispatchStep(1);
+      setActiveTab("alerts");
+
       setSelectedAlert(null);
+      setSelectedBackupRequest(null);
       setSelectedResponderIds(new Set());
+
+      setShowAlertDetailsModal(false);
+      setPreviewAlert(null);
+      setPreviewImageCandidates([]);
+      setPreviewImageIndex(0);
+      setPreviewImageFailed(false);
+
       setShowModal(true);
     };
 
     window.addEventListener("open-alert-dispatch", openModal);
+
     return () => window.removeEventListener("open-alert-dispatch", openModal);
   }, []);
 
-  // ------------------------------------------------------------
-  // LOAD PENDING ALERTS
-  // ------------------------------------------------------------
+  /* LOAD ALERTS */
   const loadAlerts = async () => {
-    const snap = await getDocs(
-      query(
-        collection(db, "alerts"),
-        where("status", "==", "Pending"),
-        orderBy("timestamp", "desc")
-      )
-    );
-    setAlerts(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+    try {
+      const snap = await getDocs(
+        query(
+          collection(db, "alerts"),
+          where("status", "==", "Pending"),
+          orderBy("timestamp", "desc"),
+        ),
+      );
+
+      setAlerts(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+    } catch (error) {
+      console.error("Error loading alerts:", error);
+      setNoticeMessage("Failed to load alerts.");
+    }
   };
 
-  // ------------------------------------------------------------
-  // REAL-TIME RESPONDERS
-  // ------------------------------------------------------------
+  /* LOAD BACKUP REQUESTS */
+  const loadBackupRequests = async () => {
+    try {
+      const snap = await getDocs(
+        query(
+          collection(db, "backup_requests"),
+          where("status", "==", "Pending"),
+          orderBy("timestamp", "desc"),
+        ),
+      );
+
+      const list = await Promise.all(
+        snap.docs.map(async (d) => {
+          const data = d.data();
+
+          let alertData = null;
+
+          if (data.alertId) {
+            try {
+              const alertDoc = await getDoc(doc(db, "alerts", data.alertId));
+
+              if (alertDoc.exists()) {
+                alertData = alertDoc.data();
+              }
+            } catch (error) {
+              console.error("Error reading backup alert:", error);
+            }
+          }
+
+          return {
+            id: d.id,
+            ...data,
+            alert: alertData,
+          };
+        }),
+      );
+
+      setBackupRequests(list);
+    } catch (error) {
+      console.error("Error loading backup requests:", error);
+      setNoticeMessage("Failed to load backup requests.");
+    }
+  };
+
+  /* REALTIME RESPONDERS */
   useEffect(() => {
     const unsub = onSnapshot(
       query(collection(db, "users"), where("role", "==", "responder")),
       (snap) => {
         setResponders(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
-      }
+      },
+      (error) => {
+        console.error("Responder realtime error:", error);
+      },
     );
+
     return () => unsub();
   }, []);
 
-  // ------------------------------------------------------------
-  // LOAD TEAMS & VEHICLES
-  // ------------------------------------------------------------
+  /* LOAD TEAMS + VEHICLES */
   useEffect(() => {
-    getDocs(collection(db, "teams")).then((snap) => {
-      setTeams(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
-    });
+    getDocs(collection(db, "teams"))
+      .then((snap) =>
+        setTeams(snap.docs.map((d) => ({ id: d.id, ...d.data() }))),
+      )
+      .catch((error) => console.error("Error loading teams:", error));
 
-    getDocs(collection(db, "vehicles")).then((snap) => {
-      setVehicles(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
-    });
+    getDocs(collection(db, "vehicles"))
+      .then((snap) =>
+        setVehicles(snap.docs.map((d) => ({ id: d.id, ...d.data() }))),
+      )
+      .catch((error) => console.error("Error loading vehicles:", error));
   }, []);
 
-  // ------------------------------------------------------------
-  // AUTO RESET LOGIC:
-  // A. If TEAM LEADER becomes Available → reset team + vehicle
-  // B. If ALL responders become Available → reset team + vehicle
-  // ------------------------------------------------------------
+  /* AUTO RESET TEAM + VEHICLE STATUS */
   useEffect(() => {
-    if (responders.length === 0 || teams.length === 0 || vehicles.length === 0)
+    if (
+      responders.length === 0 ||
+      teams.length === 0 ||
+      vehicles.length === 0
+    ) {
       return;
+    }
 
     teams.forEach((team) => {
       const teamResponders = responders.filter((r) => r.teamId === team.id);
       if (teamResponders.length === 0) return;
 
-      const teamName = team.teamName;
-
-      // Find assigned vehicle
-      const vehicle = vehicles.find((v) => v.assignedTeam === teamName);
-
-      // Find team leader
       const leader = teamResponders.find((r) => r.id === team.leaderId);
-
       const leaderResolved = leader && leader.status === "Available";
-      const allAvailable = teamResponders.every((r) => r.status === "Available");
-
-      // If neither condition met → DO NOTHING
-      if (!leaderResolved && !allAvailable) return;
-
-      console.log(
-        `RESET TRIGGERED → Team ${teamName}, leaderResolved=${leaderResolved}, allAvailable=${allAvailable}`
+      const allAvailable = teamResponders.every(
+        (r) => r.status === "Available",
       );
 
-      // Perform database reset
+      if (!leaderResolved && !allAvailable) return;
+
+      const teamName = team.teamName;
+      const vehicle = vehicles.find(
+        (v) => v.assignedTeamId === team.id || v.assignedTeam === teamName,
+      );
+
       const batch = writeBatch(db);
 
-      // Reset responders
       teamResponders.forEach((res) => {
-        batch.update(doc(db, "users", res.id), { status: "Available" });
+        if (res.status !== "Available") {
+          batch.update(doc(db, "users", res.id), { status: "Available" });
+        }
       });
 
-      // Reset team
-      batch.update(doc(db, "teams", team.id), { status: "Available" });
+      if (team.status !== "Available") {
+        batch.update(doc(db, "teams", team.id), { status: "Available" });
+      }
 
-      // Reset vehicle
-      if (vehicle) {
+      if (vehicle && vehicle.status !== "Available") {
         batch.update(doc(db, "vehicles", vehicle.id), { status: "Available" });
       }
 
-      batch.commit();
+      batch.commit().catch((error) => {
+        console.error("Auto reset failed:", error);
+      });
     });
   }, [responders, teams, vehicles]);
 
-  // ------------------------------------------------------------
-  // GROUP USING teamName + vehicle.code
-  // ------------------------------------------------------------
-// ------------------------------------------------------------
-// GROUP LOGIC EXACTLY LIKE DispatchPage
-// ------------------------------------------------------------
-const groupedList = teams
-  .map((team) => {
-    const members = responders.filter((r) => r.teamId === team.id);
+  /* GROUP TEAMS */
+  const groupedList = teams
+    .map((team) => {
+      const members = responders.filter((r) => r.teamId === team.id);
 
-    if (members.length === 0) return null;
+      if (!members.length) return null;
 
-    const vehicle =
-      vehicles.find((v) => v.assignedTeamId === team.id)?.code ||
-      vehicles.find((v) => v.assignedTeam === team.teamName)?.code ||
-      "Unassigned";
+      const vehicle =
+        vehicles.find((v) => v.assignedTeamId === team.id)?.code ||
+        vehicles.find((v) => v.assignedTeam === team.teamName)?.code ||
+        "Unassigned";
 
-    const statuses = members.map((m) => m.status);
+      const statuses = members.map((m) => m.status);
 
-    let status = "Unavailable";
-    if (statuses.some((s) => s === "Available")) status = "Available";
-    if (statuses.every((s) => s === "Dispatched")) status = "Dispatched";
+      let status = "Unavailable";
+      if (statuses.some((s) => s === "Available")) status = "Available";
+      if (statuses.every((s) => s === "Dispatched")) status = "Dispatched";
 
+      return {
+        team: team.teamName,
+        teamId: team.id,
+        vehicle,
+        responders: members,
+        status,
+      };
+    })
+    .filter(Boolean);
 
+  /* OPEN ALERT DETAILS */
+  const openAlertDetails = (alert: any) => {
+    setPreviewAlert(alert);
 
+    const candidates = buildImageCandidates(alert?.snapshotUrl || "");
+    setPreviewImageCandidates(candidates);
+    setPreviewImageIndex(0);
+    setPreviewImageFailed(false);
 
-    return {
-      team: team.teamName,
-      vehicle,
-      responders: members,
-      status,
-    };
-  })
-  .filter(Boolean);
+    setShowAlertDetailsModal(true);
+  };
 
-
-  // ------------------------------------------------------------
-  // STEP 1 → SELECT ALERT
-  // ------------------------------------------------------------
+  /* SELECT ALERT */
   const handleAlertSelect = (alert: any) => {
     setSelectedAlert(alert);
-    setShowAlertPreviewModal(false);
-    setPreviewAlert(null);
+    setSelectedBackupRequest(null);
+    setSelectedResponderIds(new Set());
+    setShowAlertDetailsModal(false);
     setDispatchStep(2);
   };
 
-  // ------------------------------------------------------------
-  // STEP 2 → SELECT TEAM
-  // ------------------------------------------------------------
+  /* SELECT TEAM */
   const handleDispatchTeam = (group: any) => {
-    const available = group.responders.filter((r: any) => r.status === "Available");
+    if (group.status !== "Available") {
+      setNoticeMessage("This team is not available for dispatch.");
+      return;
+    }
 
-    if (available.length === 0) {
+    const available = group.responders.filter(
+      (r: any) => r.status === "Available",
+    );
+
+    if (!available.length) {
       setNoticeMessage("No available responders in this team.");
-
       return;
     }
 
@@ -271,35 +318,63 @@ const groupedList = teams
     setDispatchStep(3);
   };
 
-  // ------------------------------------------------------------
-  // STEP 3 → DISPATCH NOW
-  // ------------------------------------------------------------
-  // --- SAME IMPORTS ABOVE ---
+  /* GET DISPATCHER NAME */
+  const getDispatcherName = async () => {
+    const currentUser = auth.currentUser;
+    if (!currentUser) return "Admin Panel";
 
+    try {
+      const userDoc = await getDoc(doc(db, "users", currentUser.uid));
+
+      if (userDoc.exists()) {
+        const data = userDoc.data();
+        return (
+          data.name ||
+          currentUser.displayName ||
+          currentUser.email ||
+          "Admin Panel"
+        );
+      }
+    } catch (error) {
+      console.error("Error reading dispatcher name:", error);
+    }
+
+    return currentUser.displayName || currentUser.email || "Admin Panel";
+  };
+
+  /* DISPATCH */
   const dispatchResponders = async () => {
+    if (!selectedAlert) {
+      setNoticeMessage("No alert selected.");
+      return;
+    }
+
     const selected = responders.filter((r) => selectedResponderIds.has(r.id));
 
-    const getDispatcherName = async () => {
-      const currentUser = auth.currentUser;
-      if (!currentUser) return "Admin Panel";
-
-      try {
-        const userDoc = await getDoc(doc(db, "users", currentUser.uid));
-        if (userDoc.exists()) {
-          const data = userDoc.data();
-          return data.name || currentUser.displayName || currentUser.email || "Admin Panel";
-        }
-      } catch (error) {
-        console.error("Error reading dispatcher name:", error);
-      }
-
-      return currentUser.displayName || currentUser.email || "Admin Panel";
-    };
+    if (!selected.length) {
+      setNoticeMessage("No responders selected.");
+      return;
+    }
 
     try {
       const batch = writeBatch(db);
       const ref = doc(collection(db, "dispatches"));
       const dispatchedByName = await getDispatcherName();
+
+      const firstResponder = selected[0];
+
+      const team = teams.find((t) => t.id === firstResponder.teamId);
+      const teamName = team?.teamName || "Unassigned";
+      const teamId = firstResponder.teamId;
+
+      const vehicle =
+        vehicles.find((v) => v.assignedTeamId === teamId) ||
+        vehicles.find((v) => v.assignedTeam === teamName);
+
+      const isBackup = !!selectedBackupRequest;
+      const waveNumber = isBackup
+        ? selectedBackupRequest.requestedWaveNumber
+        : 1;
 
       batch.set(ref, {
         alertId: selectedAlert.id,
@@ -308,19 +383,21 @@ const groupedList = teams
         snapshotUrl: selectedAlert.snapshotUrl || null,
 
         responders: selected.map((r) => {
-          const teamName =
+          const responderTeamName =
             teams.find((t) => t.id === r.teamId)?.teamName || "Unassigned";
 
-          const vehicle = vehicles.find((v) => v.assignedTeam === teamName);
-          const vehicleCode = vehicle?.code || "Unassigned";
+          const responderVehicle =
+            vehicles.find((v) => v.assignedTeamId === r.teamId) ||
+            vehicles.find((v) => v.assignedTeam === responderTeamName);
 
           return {
             id: r.id,
             name: r.name,
             email: (r.email || "").toLowerCase(),
             contact: r.contact || "",
-            team: teamName,
-            vehicle: vehicleCode,
+            team: responderTeamName,
+            teamId: r.teamId,
+            vehicle: responderVehicle?.code || "Unassigned",
           };
         }),
 
@@ -328,63 +405,95 @@ const groupedList = teams
 
         userReported: selectedAlert.userName,
         userAddress: selectedAlert.userAddress,
-        userContact: selectedAlert.userContact,
-        userEmail: selectedAlert.userEmail,
+        userContact: selectedAlert.userContact || "",
+        userEmail: selectedAlert.userEmail || "",
 
         status: "Dispatched",
         dispatchedBy: dispatchedByName,
         timestamp: serverTimestamp(),
+
+        waveNumber,
+        dispatchType: isBackup ? "Backup" : "Primary",
+        isBackup,
       });
 
-      // Update responders → Dispatched
-      selected.forEach((r) =>
-        batch.update(doc(db, "users", r.id), { status: "Dispatched" })
-      );
-
-      // Update alert → Dispatched
-      batch.update(doc(db, "alerts", selectedAlert.id), {
-        status: "Dispatched",
+      selected.forEach((r) => {
+        batch.update(doc(db, "users", r.id), { status: "Dispatched" });
       });
 
-      // ------------------------------------------------------------
-      // 🚒 UPDATE TEAM + VEHICLE STATUS ON DISPATCH
-      // ------------------------------------------------------------
-      if (selected.length > 0) {
-        const firstResponder = selected[0];
-        const team = teams.find((t) => t.id === firstResponder.teamId);
-
-        if (team) {
-          batch.update(doc(db, "teams", team.id), { status: "Dispatched" });
-        }
-
-        const teamName = team?.teamName;
-        const vehicle = vehicles.find((v) => v.assignedTeam === teamName);
-
-        if (vehicle) {
-          batch.update(doc(db, "vehicles", vehicle.id), { status: "Dispatched" });
-        }
+      if (team) {
+        batch.update(doc(db, "teams", team.id), { status: "Dispatched" });
       }
-      // ------------------------------------------------------------
+
+      if (vehicle) {
+        batch.update(doc(db, "vehicles", vehicle.id), { status: "Dispatched" });
+      }
+
+      if (isBackup) {
+        batch.update(doc(db, "backup_requests", selectedBackupRequest.id), {
+          status: "Approved",
+          approvedDispatchId: ref.id,
+          approvedBy: auth.currentUser?.email || "Admin",
+          approvedAt: serverTimestamp(),
+        });
+      } else {
+        batch.update(doc(db, "alerts", selectedAlert.id), {
+          status: "Dispatched",
+        });
+      }
 
       await batch.commit();
 
       setShowModal(false);
       setDispatchStep(1);
-      setShowSuccessDispatch(true);
-setTimeout(() => setShowSuccessDispatch(false), 2500);
+      setActiveTab("alerts");
+      setSelectedAlert(null);
+      setSelectedBackupRequest(null);
+      setSelectedResponderIds(new Set());
+      setShowAlertDetailsModal(false);
+      setPreviewAlert(null);
+      setPreviewImageCandidates([]);
+      setPreviewImageIndex(0);
+      setPreviewImageFailed(false);
+
+      loadBackupRequests();
+      loadAlerts();
     } catch (err) {
       console.error(err);
       setNoticeMessage("Dispatch failed. Please try again.");
-
     }
   };
 
+  /* APPROVE BACKUP */
+  const approveBackup = async (req: any) => {
+    try {
+      const alertDoc = await getDoc(doc(db, "alerts", req.alertId));
 
+      if (!alertDoc.exists()) {
+        setNoticeMessage("Alert not found.");
+        return;
+      }
 
-  // ------------------------------------------------------------
-  // UI (unchanged)
-  // ------------------------------------------------------------
-  
+      const alertData = alertDoc.data();
+
+      setSelectedBackupRequest(req);
+      setSelectedResponderIds(new Set());
+
+      setSelectedAlert({
+        id: req.alertId,
+        ...alertData,
+      });
+
+      setActiveTab("alerts");
+      setDispatchStep(2);
+
+      setNoticeMessage("Select a backup team to dispatch.");
+    } catch (err) {
+      console.error(err);
+      setNoticeMessage("Backup approval failed.");
+    }
+  };
+
   if (!showModal) return null;
 
   const formattedAlertTime = previewAlert?.timestamp?.seconds
@@ -392,79 +501,93 @@ setTimeout(() => setShowSuccessDispatch(false), 2500);
     : "Unknown";
 
   const previewImageSrc =
-    previewImageCandidates[previewImageIndex] || previewAlert?.snapshotUrl || "";
+    previewImageCandidates[previewImageIndex] ||
+    previewAlert?.snapshotUrl ||
+    "";
 
   return (
     <div className={styles.modalOverlay}>
       <div className={styles.modalWide}>
-        
-        {/* STEP 1: ALERTS */}
-        {dispatchStep === 1 && (
-          <>
-            <h3 className={styles.modalTitle}>Select Alert</h3>
+        <div className={styles.tabs}>
+          <div
+            className={`${styles.tab} ${
+              activeTab === "alerts" ? styles.activeTab : ""
+            }`}
+            onClick={() => setActiveTab("alerts")}
+          >
+            <span>Alerts</span>
+            {alerts.length > 0 && (
+              <span className={styles.tabBadge}>{alerts.length}</span>
+            )}
+          </div>
 
-            <div className={styles.tableScroll}>
-              <table className={styles.alertTable}>
-                <thead>
-                  <tr>
-                    <th>Reporter</th>
-                    <th>Contact</th>
-                    <th>Address</th>
-                    <th>Select</th>
+          <div
+            className={`${styles.tab} ${
+              activeTab === "backup" ? styles.activeTab : ""
+            }`}
+            onClick={() => setActiveTab("backup")}
+          >
+            <span>Backup</span>
+            {backupRequests.length > 0 && (
+              <span className={styles.tabBadge}>{backupRequests.length}</span>
+            )}
+          </div>
+        </div>
+
+        <div className={styles.modalTitleBar}>
+          <h2 className={styles.pageTitle}>
+            {activeTab === "backup"
+              ? "Backup Requests"
+              : dispatchStep === 1
+                ? "Select Alert"
+                : dispatchStep === 2
+                  ? "Select Team"
+                  : "Confirm Responders"}
+          </h2>
+        </div>
+
+        <div className={styles.divider} />
+
+        <div className={styles.modalBody}>
+          {activeTab === "alerts" && dispatchStep === 1 && (
+            <table className={styles.alertTable}>
+              <thead>
+                <tr>
+                  <th>Reporter</th>
+                  <th>Contact</th>
+                  <th>Address</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {alerts.map((a) => (
+                  <tr
+                    key={a.id}
+                    onClick={() => openAlertDetails(a)}
+                    className={styles.clickableRow}
+                  >
+                    <td>{a.userName}</td>
+                    <td>{a.userContact}</td>
+                    <td>{a.userAddress}</td>
+                    <td>
+                      <button
+                        className={styles.dispatchBtn}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleAlertSelect(a);
+                        }}
+                        disabled={!a || a.status !== "Pending"}
+                      >
+                        <span>Dispatch</span>
+                      </button>
+                    </td>
                   </tr>
-                </thead>
+                ))}
+              </tbody>
+            </table>
+          )}
 
-                <tbody>
-                  {alerts.map((a) => (
-                    <tr key={a.id}>
-                      <td>{a.userName}</td>
-                      <td>{a.userContact}</td>
-                      <td>{a.userAddress}</td>
-                      <td style={{ display: "flex", gap: "8px" }}>
-  <button
-    className={styles.dispatchBtn}
-    onClick={() => handleAlertSelect(a)}
-  >
-    Dispatch
-  </button>
-
-  <button
-    className={styles.viewBtn}
-    onClick={() => {
-      if (!a.snapshotUrl) {
-        setNoticeMessage("No snapshot available for this alert.");
-
-        return;
-      }
-
-      setPreviewAlert(a);
-      const candidates = buildImageCandidates(a.snapshotUrl);
-      setPreviewImageCandidates(candidates);
-      setPreviewImageIndex(0);
-      setPreviewImageFailed(false);
-      setShowAlertPreviewModal(true);
-    }}
-  >
-    View
-  </button>
-</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            <button className={styles.closeBtn} onClick={() => setShowModal(false)}>
-              Close
-            </button>
-          </>
-        )}
-
-        {/* STEP 2: TEAM LIST */}
-        {dispatchStep === 2 && (
-          <>
-            <h3 className={styles.modalTitle}>Select Team to Dispatch</h3>
-
+          {activeTab === "alerts" && dispatchStep === 2 && (
             <table className={styles.userTable}>
               <thead>
                 <tr>
@@ -472,10 +595,9 @@ setTimeout(() => setShowSuccessDispatch(false), 2500);
                   <th>Vehicle</th>
                   <th>Members</th>
                   <th>Status</th>
-                  <th>Dispatch</th>
+                  <th>Action</th>
                 </tr>
               </thead>
-
               <tbody>
                 {groupedList.map((g: any, i) => (
                   <tr key={i}>
@@ -488,49 +610,29 @@ setTimeout(() => setShowSuccessDispatch(false), 2500);
                           g.status === "Available"
                             ? styles.statusAvailable
                             : g.status === "Dispatched"
-                            ? styles.statusDispatched
-                            : styles.statusUnavailable
+                              ? styles.statusDispatched
+                              : styles.statusUnavailable
                         }
                       >
                         {g.status}
                       </span>
                     </td>
                     <td>
-  {g.status === "Available" && (
-    <button
-      className={styles.dispatchBtn}
-      onClick={() => handleDispatchTeam(g)}
-    >
-      Dispatch Team
-    </button>
-  )}
-
-  {g.status === "Dispatched" && (
-    <button
-      className={styles.viewBtn}
-      onClick={() => viewDispatchInfo(g.team)}
-    >
-      View
-    </button>
-  )}
-</td>
-
+                      <button
+                        className={styles.dispatchBtn}
+                        onClick={() => handleDispatchTeam(g)}
+                        disabled={g.status !== "Available"}
+                      >
+                        <span>Dispatch Team</span>
+                      </button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
             </table>
+          )}
 
-            <button className={styles.closeBtn} onClick={() => setShowModal(false)}>
-              Cancel
-            </button>
-          </>
-        )}
-
-        {/* STEP 3: CONFIRM RESPONDERS */}
-        {dispatchStep === 3 && (
-          <>
-            <h3 className={styles.modalTitle}>Confirm Responders</h3>
-
+          {activeTab === "alerts" && dispatchStep === 3 && (
             <table className={styles.responderTable}>
               <thead>
                 <tr>
@@ -540,7 +642,6 @@ setTimeout(() => setShowSuccessDispatch(false), 2500);
                   <th>Status</th>
                 </tr>
               </thead>
-
               <tbody>
                 {responders
                   .filter((r) => selectedResponderIds.has(r.id))
@@ -549,10 +650,12 @@ setTimeout(() => setShowSuccessDispatch(false), 2500);
                       teams.find((t) => t.id === r.teamId)?.teamName ||
                       "Unassigned";
 
-                    const vehicle =
-                      vehicles.find((v) => v.assignedTeam === teamName);
-
-                    const vehicleCode = vehicle?.code || "Unassigned";
+                    const vehicleCode =
+                      vehicles.find(
+                        (v) =>
+                          v.assignedTeamId === r.teamId ||
+                          v.assignedTeam === teamName,
+                      )?.code || "Unassigned";
 
                     return (
                       <tr key={r.id}>
@@ -565,149 +668,195 @@ setTimeout(() => setShowSuccessDispatch(false), 2500);
                   })}
               </tbody>
             </table>
+          )}
 
-            <div className={styles.modalActions}>
-              <button className={styles.dispatchBtn} onClick={dispatchResponders}>
-                Dispatch Now
+          {activeTab === "backup" && (
+            <table className={styles.alertTable}>
+              <thead>
+                <tr>
+                  <th>Requested By</th>
+                  <th>Address</th>
+                  <th>Wave</th>
+                  <th>Reason</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {backupRequests.length === 0 ? (
+                  <tr>
+                    <td colSpan={5}>No backup requests</td>
+                  </tr>
+                ) : (
+                  backupRequests.map((r) => (
+                    <tr key={r.id}>
+                      <td>{r.requestedByName}</td>
+                      <td>{r.alert?.userAddress || "Unknown"}</td>
+                      <td>{r.requestedWaveNumber}</td>
+                      <td>{r.reason}</td>
+                      <td>
+                        <button
+                          className={styles.dispatchBtn}
+                          onClick={() => approveBackup(r)}
+                        >
+                          <span>Approve</span>
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          )}
+        </div>
+
+        <div className={styles.divider} />
+
+        <div className={styles.modalFooter}>
+          {activeTab === "alerts" && dispatchStep === 3 ? (
+            <div style={{ display: "flex", gap: "10px" }}>
+              <button
+                className={styles.dispatchBtn}
+                onClick={dispatchResponders}
+              >
+                <span>Dispatch Now</span>
               </button>
 
-              <button className={styles.closeBtn} onClick={() => setShowModal(false)}>
-                Cancel
+              <button
+                className={styles.closeBtn}
+                onClick={() => setShowModal(false)}
+              >
+                <span>Close</span>
               </button>
             </div>
-          </>
-        )}
-
+          ) : (
+            <button
+              className={styles.closeBtn}
+              onClick={() => setShowModal(false)}
+            >
+              <span>Close</span>
+            </button>
+          )}
+        </div>
       </div>
-      {showAlertPreviewModal && previewAlert && (
+
+      {showAlertDetailsModal && previewAlert && (
         <div
-          className={styles.modalOverlay}
-          onClick={() => setShowAlertPreviewModal(false)}
+          className={styles.modalViewOverlay}
+          onClick={() => setShowAlertDetailsModal(false)}
         >
-          <div className={styles.modalWide} onClick={(e) => e.stopPropagation()}>
-            <h3 className={styles.modalTitle}>Alert Snapshot</h3>
+          <div
+            className={styles.modalViewContent}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className={styles.modalViewTitle}>Alert Details</h3>
 
-            <div className={styles.alertPreviewImageWrap}>
-              <img
-                src={previewImageSrc}
-                alt="Alert snapshot"
-                className={styles.alertPreviewImage}
-                onLoad={() => setPreviewImageFailed(false)}
-                onError={() => {
-                  if (previewImageIndex < previewImageCandidates.length - 1) {
-                    setPreviewImageIndex((prev) => prev + 1);
-                  } else {
-                    setPreviewImageFailed(true);
-                  }
-                }}
-              />
+            <div className={styles.modalViewBody}>
+              <div className={styles.alertImageSection}>
+                {!previewAlert.snapshotUrl ? (
+                  <div className={styles.noImageBox}>No image available</div>
+                ) : previewImageFailed ? (
+                  <div className={styles.noImageBox}>
+                    Image preview blocked by file permissions
+                  </div>
+                ) : (
+                  <img
+                    src={previewImageSrc}
+                    alt="Alert"
+                    className={styles.alertImage}
+                    onLoad={() => setPreviewImageFailed(false)}
+                    onError={() => {
+                      if (
+                        previewImageIndex <
+                        previewImageCandidates.length - 1
+                      ) {
+                        setPreviewImageIndex((prev) => prev + 1);
+                      } else {
+                        setPreviewImageFailed(true);
+                      }
+                    }}
+                  />
+                )}
+              </div>
+
+              <div className={styles.modalDetails}>
+                <p className={styles.iconRow}>
+                  <span>Name: </span>
+                  {previewAlert.userName || "N/A"}
+                </p>
+
+                <p className={styles.iconRow}>
+                  <span>Contact: </span>
+                  {previewAlert.userContact || "N/A"}
+                </p>
+
+                <p className={styles.iconRow}>
+                  <span>Email: </span>
+                  {previewAlert.userEmail || "N/A"}
+                </p>
+
+                <p className={styles.iconRow}>
+                  <span>Address: </span>
+                  {previewAlert.userAddress || "N/A"}
+                </p>
+
+                <p>
+                  <strong>Alert Type:</strong> {previewAlert.type || "Unknown"}
+                </p>
+
+                <p>
+                  <strong>Location:</strong>{" "}
+                  {previewAlert.location || "Unknown"}
+                </p>
+
+                <p>
+                  <strong>Status:</strong> {previewAlert.status || "Pending"}
+                </p>
+
+                <p>
+                  <strong>Alert Received At:</strong>{" "}
+                  {previewAlert.timestamp?.seconds
+                    ? new Date(
+                        previewAlert.timestamp.seconds * 1000,
+                      ).toLocaleString()
+                    : "Unknown"}
+                </p>
+              </div>
             </div>
 
-            {previewImageFailed && (
-              <p>
-                Snapshot preview is blocked by file permissions. Set the Google Drive file to
-                <strong> Anyone with the link</strong> and try again.
-              </p>
-            )}
-
-            <div className={styles.alertPreviewInfo}>
-              <p><strong>Reporter:</strong> {previewAlert.userName || "Unknown"}</p>
-              <p><strong>Contact:</strong> {previewAlert.userContact || "Unknown"}</p>
-              <p><strong>Address:</strong> {previewAlert.userAddress || "Unknown"}</p>
-              <p><strong>Status:</strong> {previewAlert.status || "Pending"}</p>
-              <p><strong>Detected At:</strong> {formattedAlertTime}</p>
-            </div>
-
-            <div className={styles.modalActions}>
+            <div className={styles.modalViewActions}>
               <button
                 className={styles.dispatchBtn}
                 onClick={() => handleAlertSelect(previewAlert)}
+                disabled={!previewAlert || previewAlert.status !== "Pending"}
               >
-                Dispatch
+                <span>Dispatch</span>
               </button>
+
               <button
                 className={styles.closeBtn}
-                onClick={() => setShowAlertPreviewModal(false)}
+                onClick={() => setShowAlertDetailsModal(false)}
               >
-                Close
+                <span>Close</span>
               </button>
             </div>
           </div>
         </div>
       )}
-      {showViewModal && selectedDispatch && (
-  <div className={styles.modalOverlay} onClick={() => setShowViewModal(false)}>
-    <div className={styles.modalWide} onClick={(e) => e.stopPropagation()}>
-      <h3 className={styles.modalTitle}>Dispatch Details</h3>
 
-      <p><strong>Alert Type:</strong> {selectedDispatch.alertType}</p>
-      <p><strong>Location:</strong> {selectedDispatch.alertLocation}</p>
-      <p><strong>Dispatched By:</strong> {selectedDispatch.dispatchedBy}</p>
-
-      <p>
-        <strong>Time:</strong>{" "}
-        {selectedDispatch.timestamp
-          ? new Date(
-              selectedDispatch.timestamp.seconds * 1000
-            ).toLocaleString()
-          : "—"}
-      </p>
-
-      <hr className={styles.separator} />
-
-      <h4>Reported By</h4>
-      <p><strong>Name:</strong> {selectedDispatch.userReported}</p>
-      <p><strong>Contact:</strong> {selectedDispatch.userContact}</p>
-      <p><strong>Email:</strong> {selectedDispatch.userEmail}</p>
-      <p><strong>Address:</strong> {selectedDispatch.userAddress}</p>
-
-      <hr className={styles.separator} />
-
-      <h4>Responders</h4>
-      <ul>
-        {selectedDispatch.responders?.map((r: any) => (
-          <li key={r.id}>
-            {r.name} — {r.team} ({r.vehicle})
-          </li>
-        ))}
-      </ul>
-
-      <button
-        className={styles.closeBtn}
-        onClick={() => setShowViewModal(false)}
-      >
-        Close
-      </button>
-    </div>
-  </div>
-)}
-
-{noticeMessage && (
-
-  <div className={styles.modalOverlay}>
-    <div className={styles.noticeBox}>
-      <h3 className={styles.modalTitle}>Notice</h3>
-
-```
-  <p className={styles.noticeMessage}>
-    {noticeMessage}
-  </p>
-
-  <div className={styles.noticeActions}>
-    <button
-      className={styles.closeBtn}
-      onClick={() => setNoticeMessage(null)}
-    >
-      OK
-    </button>
-  </div>
-</div>
-```
-
-  </div>
-)}
-
-
+      {noticeMessage && (
+        <div className={styles.modalOverlay}>
+          <div style={{ textAlign: "center" }} className={styles.modalContent}>
+            <h3 className={styles.modalTitle}>Notice</h3>
+            <p>{noticeMessage}</p>
+            <button
+              className={styles.closeBtn}
+              onClick={() => setNoticeMessage(null)}
+            >
+              <span>OK</span>
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

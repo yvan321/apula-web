@@ -200,7 +200,7 @@ const SettingsPage = () => {
             />
 
             <button type="submit" className={styles.saveBtn}>
-              Save Changes
+              <span>Save Changes</span>
             </button>
           </form>
 

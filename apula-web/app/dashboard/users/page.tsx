@@ -1,15 +1,19 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import AdminHeader from "@/components/shared/adminHeader";
 import AlertBellButton from "@/components/AlertDispatch/AlertBellButton";
 import AlertDispatchModal from "@/components/AlertDispatch/AlertDispatchModal";
 import styles from "./userpagestyles.module.css";
-import { FaUsers, FaUserShield, FaUserTie, FaUser, FaSearch } from "react-icons/fa";
-import { collection, getDocs, doc, updateDoc } from "firebase/firestore"; // <-- UPDATED
+import {
+  FaUsers,
+  FaUserShield,
+  FaUserTie,
+  FaUser,
+  FaSearch,
+} from "react-icons/fa";
+import { collection, getDocs, doc, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-
-
 
 type User = {
   id: string;
@@ -33,6 +37,8 @@ export default function UsersPage() {
   const [loading, setLoading] = useState(true);
   const [showSuccess, setShowSuccess] = useState(false);
 
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5;
 
   useEffect(() => {
     const fetchUsers = async () => {
@@ -53,27 +59,26 @@ export default function UsersPage() {
   const norm = (r?: string) => (r ? r.toLowerCase() : "");
 
   const totalAll = users.length;
- const totalAdmins = users.filter(
-  (u) => norm(u.role) === "admin" || norm(u.role) === "superadmin"
-).length;
+  const totalAdmins = users.filter(
+    (u) => norm(u.role) === "admin" || norm(u.role) === "superadmin"
+  ).length;
   const totalResponders = users.filter((u) => norm(u.role) === "responder").length;
   const totalUsers = users.filter((u) => norm(u.role) === "user").length;
 
   const roleMatches = (user: User) => {
-  if (selectedRole === "All") return true;
+    if (selectedRole === "All") return true;
 
-  const role = norm(user.role);
+    const role = norm(user.role);
 
-  // When Admin card is clicked, include superadmin
-  if (selectedRole === "Admin") {
-    return role === "admin" || role === "superadmin";
-  }
+    if (selectedRole === "Admin") {
+      return role === "admin" || role === "superadmin";
+    }
 
-  return role === selectedRole.toLowerCase();
-};
+    return role === selectedRole.toLowerCase();
+  };
 
   const matchesSearch = (user: User) => {
-    const q = searchTerm.toLowerCase();
+    const q = searchTerm.toLowerCase().trim();
     if (!q) return true;
 
     return (
@@ -84,7 +89,17 @@ export default function UsersPage() {
     );
   };
 
-  const filteredUsers = users.filter((u) => roleMatches(u) && matchesSearch(u));
+  const filteredUsers = useMemo(() => {
+    return users.filter((u) => roleMatches(u) && matchesSearch(u));
+  }, [users, selectedRole, searchTerm]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedRole, searchTerm]);
+
+  const totalPages = Math.ceil(filteredUsers.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const paginatedUsers = filteredUsers.slice(startIndex, startIndex + itemsPerPage);
 
   const openModal = (user: User) => setSelectedUser(user);
   const closeModal = () => setSelectedUser(null);
@@ -109,7 +124,6 @@ export default function UsersPage() {
     <div>
       <AdminHeader />
 
-      {/* Notification Bell */}
       <div style={{ position: "absolute", top: 20, right: 30, zIndex: 50 }}>
         <AlertBellButton />
       </div>
@@ -121,64 +135,57 @@ export default function UsersPage() {
           <div className={styles.headerRow}>
             <h2 className={styles.pageTitle}>Users</h2>
           </div>
+
           <hr className={styles.separator} />
 
-          {/* Summary Cards */}
           <div className={styles.summaryRow}>
-            <div
-              className={`${styles.summaryCard} ${styles.allCard} ${
-                selectedRole === "All" ? styles.activeCard : ""
-              }`}
-              onClick={() => setSelectedRole("All")}
-            >
-              <FaUsers className={styles.summaryIcon} />
-              <div className={styles.summaryText}>
-                <h4>All</h4>
-                <p>{totalAll}</p>
-              </div>
-            </div>
 
-            <div
-              className={`${styles.summaryCard} ${styles.adminCard} ${
-                selectedRole === "Admin" ? styles.activeCard : ""
-              }`}
-              onClick={() => setSelectedRole("Admin")}
-            >
-              <FaUserShield className={styles.summaryIcon} />
-              <div className={styles.summaryText}>
-                <h4>Admin</h4>
-                <p>{totalAdmins}</p>
-              </div>
-            </div>
+  <div
+    className={`${styles.summaryCard} ${selectedRole === "All" ? styles.activeCard : ""}`}
+    onClick={() => setSelectedRole("All")}
+  >
+    <FaUsers className={styles.summaryIcon} />
+    <div className={styles.summaryText}>
+      <h4>All</h4>
+      <p>{totalAll}</p>
+    </div>
+  </div>
 
-            <div
-              className={`${styles.summaryCard} ${styles.responderCard} ${
-                selectedRole === "Responder" ? styles.activeCard : ""
-              }`}
-              onClick={() => setSelectedRole("Responder")}
-            >
-              <FaUserTie className={styles.summaryIcon} />
-              <div className={styles.summaryText}>
-                <h4>Responder</h4>
-                <p>{totalResponders}</p>
-              </div>
-            </div>
+  <div
+    className={`${styles.summaryCard} ${selectedRole === "Admin" ? styles.activeCard : ""}`}
+    onClick={() => setSelectedRole("Admin")}
+  >
+    <FaUserShield className={styles.summaryIcon} />
+    <div className={styles.summaryText}>
+      <h4>Admin</h4>
+      <p>{totalAdmins}</p>
+    </div>
+  </div>
 
-            <div
-              className={`${styles.summaryCard} ${styles.userCard} ${
-                selectedRole === "User" ? styles.activeCard : ""
-              }`}
-              onClick={() => setSelectedRole("User")}
-            >
-              <FaUser className={styles.summaryIcon} />
-              <div className={styles.summaryText}>
-                <h4>User</h4>
-                <p>{totalUsers}</p>
-              </div>
-            </div>
-          </div>
+  <div
+    className={`${styles.summaryCard} ${selectedRole === "Responder" ? styles.activeCard : ""}`}
+    onClick={() => setSelectedRole("Responder")}
+  >
+    <FaUserTie className={styles.summaryIcon} />
+    <div className={styles.summaryText}>
+      <h4>Responder</h4>
+      <p>{totalResponders}</p>
+    </div>
+  </div>
 
-          {/* Table */}
+  <div
+    className={`${styles.summaryCard} ${selectedRole === "User" ? styles.activeCard : ""}`}
+    onClick={() => setSelectedRole("User")}
+  >
+    <FaUser className={styles.summaryIcon} />
+    <div className={styles.summaryText}>
+      <h4>User</h4>
+      <p>{totalUsers}</p>
+    </div>
+  </div>
+
+</div>
+
           <div className={styles.tableSection}>
             <div className={styles.filters}>
               <div className={styles.searchWrapper}>
@@ -200,7 +207,6 @@ export default function UsersPage() {
                   <th>Name</th>
                   <th>Role</th>
                   <th>Contact</th>
-                 
                   <th>Actions</th>
                 </tr>
               </thead>
@@ -208,33 +214,31 @@ export default function UsersPage() {
               <tbody>
                 {loading ? (
                   <tr>
-                    <td colSpan={6} className={styles.noResults}>Loading...</td>
+                    <td colSpan={5} className={styles.noResults}>
+                      Loading...
+                    </td>
                   </tr>
-                ) : filteredUsers.length > 0 ? (
-                  filteredUsers.map((user) => (
+                ) : paginatedUsers.length > 0 ? (
+                  paginatedUsers.map((user) => (
                     <tr key={user.id}>
-                      <td>{user.id}</td>
-                      <td>{user.name ?? "N/A"}</td>
-                      <td>{user.role ?? "N/A"}</td>
-                      <td>{user.contact ?? "N/A"}</td>
-                   
-
-                      <td>
-                        {/* Always show View */}
+                      <td data-label="ID">{user.id}</td>
+                      <td data-label="Name">{user.name ?? "N/A"}</td>
+                      <td data-label="Role">{user.role ?? "N/A"}</td>
+                      <td data-label="Contact">{user.contact ?? "N/A"}</td>
+                      <td data-label="Actions" className={styles.actionCell}>
                         <button
                           className={styles.viewBtn}
                           onClick={() => openModal(user)}
                         >
-                          View
+                          <span>View</span>
                         </button>
 
-                        {/* Show Edit ONLY for responders */}
-                        {user.role === "responder" && (
+                        {norm(user.role) === "responder" && (
                           <button
                             className={styles.editBtn}
                             onClick={() => setEditTarget(user)}
                           >
-                            Edit
+                            <span>Edit</span>
                           </button>
                         )}
                       </td>
@@ -242,26 +246,53 @@ export default function UsersPage() {
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={6} className={styles.noResults}>No users found.</td>
+                    <td colSpan={5} className={styles.noResults}>
+                      No users found.
+                    </td>
                   </tr>
                 )}
               </tbody>
             </table>
+
+            {!loading && filteredUsers.length > 0 && (
+              <div className={styles.pagination}>
+                <button
+                  className={styles.pageBtn}
+                  onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                  disabled={currentPage === 1}
+                >
+                  Prev
+                </button>
+
+                <span className={styles.pageInfo}>
+                  Page {currentPage} of {totalPages || 1}
+                </span>
+
+                <button
+                  className={styles.pageBtn}
+                  onClick={() =>
+                    setCurrentPage((prev) => Math.min(prev + 1, totalPages))
+                  }
+                  disabled={currentPage === totalPages || totalPages === 0}
+                >
+                  Next
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </div>
 
-      {/* VIEW MODAL */}
       {selectedUser && (
         <div className={styles.modalOverlay} onClick={closeModal}>
           <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
             <h3 className={styles.modalTitle}>User Information</h3>
 
             <div className={styles.modalDetails}>
+              <p><strong>ID:</strong> {selectedUser.id}</p>
               <p><strong>Name:</strong> {selectedUser.name ?? "N/A"}</p>
               <p><strong>Role:</strong> {selectedUser.role ?? "N/A"}</p>
               <p><strong>Contact:</strong> {selectedUser.contact ?? "N/A"}</p>
-              
               <p><strong>Address:</strong> {selectedUser.address ?? "N/A"}</p>
               <p><strong>Email:</strong> {selectedUser.email ?? "N/A"}</p>
               <p>
@@ -271,23 +302,22 @@ export default function UsersPage() {
             </div>
 
             <button className={styles.closeBtn} onClick={closeModal}>
-              Close
+              <span>Close</span>
             </button>
           </div>
         </div>
       )}
 
-      {/* EDIT MODAL (Responder Only) */}
       {editTarget && (
         <div className={styles.modalOverlay} onClick={() => setEditTarget(null)}>
           <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
             <h3 className={styles.modalTitle}>Edit Responder Status</h3>
 
             <div className={styles.modalDetails}>
-              <p><strong>Name:</strong> {editTarget.name}</p>
-              <p><strong>Role:</strong> {editTarget.role}</p>
+              <p><strong>Name:</strong> {editTarget.name ?? "N/A"}</p>
+              <p><strong>Role:</strong> {editTarget.role ?? "N/A"}</p>
 
-              <label><strong>Status:</strong></label>
+              <label className={styles.inputLabel}><strong>Status:</strong></label>
               <select
                 value={editTarget.status ?? "Available"}
                 onChange={(e) =>
@@ -297,66 +327,59 @@ export default function UsersPage() {
               >
                 <option value="Available">Available</option>
                 <option value="Unavailable">Unavailable</option>
-              
               </select>
 
-              <p><strong>Email:</strong> {editTarget.email}</p>
-              <p><strong>Contact:</strong> {editTarget.contact}</p>
+              <p><strong>Email:</strong> {editTarget.email ?? "N/A"}</p>
+              <p><strong>Contact:</strong> {editTarget.contact ?? "N/A"}</p>
             </div>
 
-        <button
-  className={styles.saveBtn}
-  onClick={async () => {
-    if (!editTarget) return;
+            <button
+              className={styles.saveBtn}
+              onClick={async () => {
+                if (!editTarget) return;
 
-    try {
-      // Update Firestore
-      await updateDoc(doc(db, "users", editTarget.id), {
-        status: editTarget.status,
-      });
+                try {
+                  await updateDoc(doc(db, "users", editTarget.id), {
+                    status: editTarget.status,
+                  });
 
-      // Update UI
-      setUsers((prev) =>
-        prev.map((u) =>
-          u.id === editTarget.id ? { ...u, status: editTarget.status } : u
-        )
-      );
+                  setUsers((prev) =>
+                    prev.map((u) =>
+                      u.id === editTarget.id ? { ...u, status: editTarget.status } : u
+                    )
+                  );
 
-      // Show success modal
-      setShowSuccess(true);
+                  setShowSuccess(true);
+                  setTimeout(() => setShowSuccess(false), 2000);
+                } catch (err) {
+                  console.error("Error updating status:", err);
+                  alert("Failed to update status.");
+                }
 
-      // Auto-close success after 2 seconds
-      setTimeout(() => setShowSuccess(false), 2000);
-    } catch (err) {
-      console.error("Error updating status:", err);
-      alert("Failed to update status.");
-    }
+                setEditTarget(null);
+              }}
+            >
+              <span>Save</span>
+            </button>
 
-    setEditTarget(null);
-  }}
->
-  Save
-</button>
-
-
-
-
-            <button className={styles.closeBtn} onClick={() => setEditTarget(null)}>
-              Cancel
+            <button
+              className={styles.closeBtn}
+              onClick={() => setEditTarget(null)}
+            >
+              <span>Cancel</span>
             </button>
           </div>
         </div>
       )}
 
       {showSuccess && (
-  <div className={styles.successOverlay}>
-    <div className={styles.successModal}>
-      <h3>Status Updated!</h3>
-      <p>The responder’s status has been successfully saved.</p>
-    </div>
-  </div>
-)}
-
+        <div className={styles.successOverlay}>
+          <div className={styles.successModal}>
+            <h3>Status Updated!</h3>
+            <p>The responder’s status has been successfully saved.</p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

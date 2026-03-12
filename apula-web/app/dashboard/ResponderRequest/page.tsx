@@ -18,27 +18,44 @@ import styles from "./responderRequest.module.css";
 import AlertBellButton from "@/components/AlertDispatch/AlertBellButton";
 import AlertDispatchModal from "@/components/AlertDispatch/AlertDispatchModal";
 
-const ResponderRequestsPage = () => {
-  const [responders, setResponders] = useState([]);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [confirmAction, setConfirmAction] = useState(null);
+type Responder = {
+  id: string;
+  name?: string;
+  email?: string;
+  address?: string;
+  status?: string;
+  role?: string;
+  verified?: boolean;
+  approved?: boolean;
+};
 
-  // 🔥 Load pending responders (verified but NOT approved)
+type ConfirmAction =
+  | {
+      action: "accept" | "decline";
+      responder: Responder;
+    }
+  | null;
+
+const ResponderRequestsPage = () => {
+  const [responders, setResponders] = useState<Responder[]>([]);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [confirmAction, setConfirmAction] = useState<ConfirmAction>(null);
+
   useEffect(() => {
     const loadResponders = async () => {
       try {
         const q = query(
           collection(db, "users"),
           where("role", "==", "responder"),
-          where("verified", "==", true),   // Email verified
-          where("approved", "==", false)   // Waiting for admin approval
+          where("verified", "==", true),
+          where("approved", "==", false)
         );
 
         const querySnapshot = await getDocs(q);
-        const list: any[] = [];
+        const list: Responder[] = [];
 
         querySnapshot.forEach((docSnap) => {
-          list.push({ id: docSnap.id, ...docSnap.data() });
+          list.push({ id: docSnap.id, ...docSnap.data() } as Responder);
         });
 
         setResponders(list);
@@ -50,17 +67,16 @@ const ResponderRequestsPage = () => {
     loadResponders();
   }, []);
 
-  // 🔍 Filter by search
-  const filtered = responders.filter((r: any) =>
-    `${r.name} ${r.email}`.toLowerCase().includes(searchTerm.toLowerCase())
+  const filtered = responders.filter((r) =>
+    `${r.name ?? ""} ${r.email ?? ""}`
+      .toLowerCase()
+      .includes(searchTerm.toLowerCase())
   );
 
-  // ⚡ Choose accept or decline
-  const handleAction = (action: string, responder: any) => {
+  const handleAction = (action: "accept" | "decline", responder: Responder) => {
     setConfirmAction({ action, responder });
   };
 
-  // 🚀 Firestore update when admin Approves/Declines
   const executeAction = async () => {
     if (!confirmAction) return;
 
@@ -72,20 +88,19 @@ const ResponderRequestsPage = () => {
       if (action === "accept") {
         await updateDoc(ref, {
           approved: true,
-          status: "Available", // NEW responders become available
+          status: "Available",
         });
       } else {
         await updateDoc(ref, {
           approved: false,
-          status: "declined",
+          status: "Declined",
         });
       }
 
-      // Remove from UI after action
-      setResponders((prev) => prev.filter((r: any) => r.id !== responder.id));
+      setResponders((prev) => prev.filter((r) => r.id !== responder.id));
 
       alert(
-        `${responder.name} has been ${
+        `${responder.name ?? "Responder"} has been ${
           action === "accept" ? "approved" : "declined"
         }.`
       );
@@ -101,21 +116,20 @@ const ResponderRequestsPage = () => {
     <div>
       <AdminHeader />
 
-      
-            {/* 🔔 Bell Icon at top-right */}
-            <div style={{ position: "absolute", top: 20, right: 30, zIndex: 50 }}>
-              <AlertBellButton />
-            </div>
-      
-            {/* 🚨 Alert Dispatch Modal (opens when bell is clicked) */}
-            <AlertDispatchModal />
+      <div style={{ position: "absolute", top: 20, right: 30, zIndex: 50 }}>
+        <AlertBellButton />
+      </div>
+
+      <AlertDispatchModal />
 
       <div className={styles.container}>
         <div className={styles.contentSection}>
-          <h2 className={styles.pageTitle}>Responder Requests</h2>
+          <div className={styles.headerRow}>
+            <h2 className={styles.pageTitle}>Responder Requests</h2>
+          </div>
+
           <hr className={styles.separator} />
 
-          {/* Search */}
           <div className={styles.filters}>
             <div className={styles.searchWrapper}>
               <FaSearch className={styles.searchIcon} size={18} />
@@ -129,7 +143,6 @@ const ResponderRequestsPage = () => {
             </div>
           </div>
 
-          {/* Table */}
           <div className={styles.tableSection}>
             <table className={styles.userTable}>
               <thead>
@@ -144,25 +157,31 @@ const ResponderRequestsPage = () => {
 
               <tbody>
                 {filtered.length ? (
-                  filtered.map((r: any) => (
+                  filtered.map((r) => (
                     <tr key={r.id}>
-                      <td>{r.name}</td>
-                      <td>{r.email}</td>
-                      <td>{r.address}</td>
-                      <td>{r.status}</td>
-                      <td>
+                      <td data-label="Name">{r.name ?? "N/A"}</td>
+                      <td data-label="Email">{r.email ?? "N/A"}</td>
+                      <td data-label="Address">{r.address ?? "N/A"}</td>
+                      <td data-label="Status">{r.status ?? "Pending"}</td>
+                      <td data-label="Actions" className={styles.actionCell}>
                         <button
                           className={styles.acceptBtn}
                           onClick={() => handleAction("accept", r)}
                         >
-                          <FaUserCheck /> Accept
+                          <span className={styles.btnContent}>
+                            <FaUserCheck />
+                            Accept
+                          </span>
                         </button>
 
                         <button
                           className={styles.declineBtn}
                           onClick={() => handleAction("decline", r)}
                         >
-                          <FaUserTimes /> Decline
+                          <span className={styles.btnContent}>
+                            <FaUserTimes />
+                            Decline
+                          </span>
                         </button>
                       </td>
                     </tr>
@@ -180,17 +199,16 @@ const ResponderRequestsPage = () => {
         </div>
       </div>
 
-      {/* Confirmation Modal */}
       {confirmAction && (
         <div className={styles.modalOverlay}>
           <div className={styles.confirmModal}>
-            <h3>
+            <h3 className={styles.modalTitle}>
               {confirmAction.action === "accept"
                 ? "Accept Responder"
                 : "Decline Responder"}
             </h3>
 
-            <p>
+            <p className={styles.confirmText}>
               Are you sure you want to{" "}
               {confirmAction.action === "accept" ? "approve" : "decline"}{" "}
               <strong>{confirmAction.responder.name}</strong>?
@@ -201,7 +219,7 @@ const ResponderRequestsPage = () => {
                 className={styles.cancelBtn}
                 onClick={() => setConfirmAction(null)}
               >
-                Cancel
+                <span>Cancel</span>
               </button>
 
               <button
@@ -212,7 +230,9 @@ const ResponderRequestsPage = () => {
                 }
                 onClick={executeAction}
               >
-                {confirmAction.action === "accept" ? "Accept" : "Decline"}
+                <span>
+                  {confirmAction.action === "accept" ? "Accept" : "Decline"}
+                </span>
               </button>
             </div>
           </div>

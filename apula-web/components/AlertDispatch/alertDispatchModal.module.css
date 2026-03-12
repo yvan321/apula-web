@@ -1,101 +1,1248 @@
+/* MAIN */
+
+
+.container {
+  padding: 20px;
+  background-color: w;
+}
+
+.pageWrapper {
+  background: #e4e4e4;          /* light gray background */
+  min-height: 100vh;
+
+}
+
+.contentSection {
+  background: #fff;
+  padding: 20px;
+  border-radius: 12px;
+  box-shadow: 0 2px 6px rgba(255, 255, 255, 0.08);
+}
+
+.pageTitle {
+  color: #800000;
+  font-size: 1.6rem;
+  font-weight: 700;
+}
+
+.separator {
+  margin: 10px 0;
+  border: 0;
+  border-top: 1px solid #ddd;
+}
+
+/* SEARCH BAR */
+.searchWrapper {
+  position: relative;
+  width: 300px;
+  margin-bottom: 15px;
+}
+
+.searchIcon {
+  position: absolute;
+  top: 50%;
+  left: 10px;
+  transform: translateY(-50%);
+  color: #777;
+}
+
+.searchInput {
+  width: 100%;
+  padding: 10px 10px 10px 35px;
+  border: 1px solid #ccc;
+  border-radius: 20px;
+  outline: none;
+  font-size: 0.95rem;
+}
+
+/* RESPONDER TABLE */
+.userTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.95rem;
+  color: #000;
+}
+
+.userTable th {
+  background: #8b0000;
+  color: #fff;
+  padding: 10px;
+  text-align: left;
+}
+
+.userTable td {
+  padding: 10px;
+  border-bottom: 1px solid #eee;
+}
+
+.statusAvailable {
+  color: #28a745;
+  font-weight: 700;
+}
+
+.statusDispatched {
+  color: #dc3545;
+  font-weight: 700;
+}
+.statusUnavailable {
+  background: #000;
+  color: #fff;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-weight: bold;
+}
+/* ACTION BUTTONS */
+.dispatchBtn {
+  background: #28a745;
+  color: white;
+  border: none;
+  padding: 6px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.viewBtn {
+  background: #f89c1b;
+  color: white;
+  border: none;
+  padding: 6px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+/* MODAL BASE */
 .modalOverlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
+  inset: 0;
   background: rgba(0,0,0,0.5);
   display: flex;
   justify-content: center;
   align-items: center;
+  padding: 10px;
   z-index: 9999;
 }
 
 .modalContent {
-  background: white;
+  background: #fff;
   padding: 20px;
+  border-radius: 12px;
+  width: 400px;
+  max-width: 95%;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+}
+
+.modalWide {
+  background: #ffffff;
+  padding: 20px;
+  border-radius: 12px;
+
   width: 90%;
   max-width: 900px;
-  border-radius: 10px;
-  animation: fadeIn 0.2s ease-in-out;
+
+  max-height: 80vh;
+  overflow-y: auto;
+
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+  color: black;
 }
 
-.table {
+
+/* MODAL TITLES */
+.modalTitle {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: #800000;
+  margin-bottom: 15px;
+  text-align: center;
+}
+
+/* SCROLLABLE AREA */
+.tableScroll {
+  max-height: 400px;
+  overflow-y: auto;
+  margin-bottom: 15px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+}
+
+/* ALERT TABLE */
+.alertTable {
   width: 100%;
   border-collapse: collapse;
-  margin: 15px 0;
 }
 
-.table th,
-.table td {
+.alertTable th {
+  background: #800000;
+  color: #fff;
   padding: 10px;
-  border-bottom: 1px solid #ddd;
+  font-size: 0.9rem;
+  
 }
 
-.btn {
-  background: #007bff;
-  color: white;
-  padding: 7px 12px;
-  border-radius: 6px;
-  border: none;
-  cursor: pointer;
+.alertTable td {
+  border-bottom: 1px solid #eee;
+  padding: 10px;
+  font-size: 0.9rem;
 }
 
+/* RESPONDER TABLE IN MODAL */
+.responderTable {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.responderTable th {
+  background: #800000;
+  color: #fff;
+  padding: 10px;
+}
+
+.responderTable td {
+  padding: 10px;
+  border-bottom: 1px solid #eee;
+}
+
+.responderTable tbody {
+  color: black;
+}
+
+/* SELECT ALL */
+.selectAllRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  font-weight: 600;
+}
+
+/* BUTTONS */
 .assignBtn {
-  background: #28a745;
+  background: #c00;
   color: white;
-  padding: 10px 14px;
-  border-radius: 6px;
   border: none;
-  margin-right: 10px;
+  padding: 8px 14px;
+  border-radius: 6px;
   cursor: pointer;
+  font-weight: 600;
+  margin-right: 8px;
+}
+
+.assignBtn:hover {
+  background: #9a0000;
 }
 
 .closeBtn {
   background: #555;
   color: white;
-  padding: 10px 14px;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.modalActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.alertPreviewImageWrap {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: #f8f9fa;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 14px;
+  margin-bottom: 14px;
+}
+
+.alertPreviewImage {
+  width: 100%;
+  max-width: 560px;
+  max-height: 380px;
+  object-fit: contain;
+  border-radius: 8px;
+}
+
+.alertPreviewInfo {
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 12px 14px;
+  background: #ffffff;
+}
+
+.alertPreviewInfo p {
+  margin: 6px 0;
+}
+
+/* VIEW MODAL DETAILS */
+.modalDetails p {
+  margin: 5px 0;
+  font-size: 0.95rem;
+}
+
+.section p strong {
+  color: #800000;
+}
+
+
+/* SUCCESS MODAL */
+.successModal {
+  background: #ffffff;
+  width: 380px;
+  padding: 25px;
+  border-radius: 14px;
+  text-align: center;
+  animation: fadeInScale 0.25s ease;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.25);
+}
+
+.successIcon {
+  font-size: 48px;
+  color: #28a745;
+  margin-bottom: 10px;
+  font-weight: bold;
+}
+
+.successTitle {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: #28a745;
+  margin-bottom: 5px;
+}
+
+.successMessage {
+  font-size: 1rem;
+  color: #555;
+  margin-bottom: 20px;
+}
+
+.successCloseBtn {
+  background: #28a745;
+  color: #fff;
+  border: none;
+  padding: 10px 18px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.successCloseBtn:hover {
+  background: #1e7e34;
+}
+
+
+.viewBtn {
+  background-color: #c00;
+  color: white;
+  padding: 8px 14px;
   border-radius: 6px;
   border: none;
   cursor: pointer;
 }
 
-.selectAll {
-  margin-bottom: 10px;
+
+/* Animation */
+@keyframes fadeInScale {
+  from {
+    opacity: 0;
+    transform: scale(0.85);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+
+/* ---------------- TABS ---------------- */
+.tabs {
+  display: flex;
+  gap: 40px;
+  border-bottom: 1px solid #ddd;
+  margin-bottom: 20px;
+}
+
+.tab {
+  font-size: 18px;
+  font-weight: 700;
+  color: #777;
+  padding: 14px 10px;
+  cursor: pointer;
+  position: relative; /* REQUIRED for badge positioning */
+  letter-spacing: 0.5px;
+}
+
+/* ACTIVE TAB */
+
+.activeTab {
+  color: #a30000;
+}
+
+/* UNDERLINE */
+
+.activeTab::after {
+  content: "";
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  width: 100%;
+  height: 4px;
+  background: #a30000;
+  border-radius: 2px;
+}
+
+/* BADGE */
+
+.tabBadge {
+  position: absolute;
+  top: -6px;
+  right: -20px;
+
+  min-width: 18px;
+  height: 18px;
+
   display: flex;
   align-items: center;
-  gap: 6px;
-}
+  justify-content: center;
 
-/* small notice modal */
-.noticeBox {
-background: #fff;
-width: 380px;
-max-width: 90%;
-padding: 24px;
-border-radius: 12px;
-box-shadow: 0 12px 35px rgba(0,0,0,0.25);
-animation: modalPop .18s ease-out;
-}
+  background: #ff5869;
+  color: #fff;
 
-.noticeMessage {
-text-align: center;
-margin: 18px 0 24px;
-font-size: 14px;
-color: #444;
-}
+  font-size: 11px;
+  font-weight: 700;
 
-.noticeActions {
-display: flex;
-justify-content: flex-end;
+  border-radius: 50%;
+  padding: 5 5px;
+
+  line-height: 1;
 }
 
 
 
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  padding: 20px;
+}
 
-/* Removed: successOverlay, successBox, successIcon, successTitle, successMessage */
+.modalWide {
+  width: 95%;
+  max-width: 1100px;
+  height: 90vh;
+  background: #ffffff;
+  border-radius: 16px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+}
 
-@keyframes fadeIn {
-  from { opacity: 0; transform: scale(0.97); }
-  to { opacity: 1; transform: scale(1); }
+/* TAB CONTAINER */
+
+.tabs {
+  display: flex;
+  justify-content: center; /* CENTER TABS */
+  align-items: center;
+  gap: 60px; /* spacing between tabs */
+  border-bottom: 1px solid #ddd;
+  padding: 10px 0;
+  margin-bottom: 10px;
+}
+
+/* TAB TEXT */
+
+.tab {
+  font-size: 18px; /* BIGGER TEXT */
+  font-weight: 700;
+  color: #777;
+  padding: 14px 10px;
+  cursor: pointer;
+  position: relative;
+  letter-spacing: 0.5px;
+}
+
+/* ACTIVE TAB */
+
+.activeTab {
+  color: #a30000;
+}
+
+/* UNDERLINE */
+
+.activeTab::after {
+  content: "";
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  width: 100%;
+  height: 4px;
+  background: #a30000;
+  border-radius: 2px;
+}
+
+
+.modalTitleBar {
+  padding: 0 20px 14px;
+}
+
+.pageTitle {
+  margin: 0;
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: #111827;
+}
+
+.divider {
+  height: 1px;
+  background: #a30000;
+  width: 100%;
+  flex-shrink: 0;
+}
+
+.modalBody {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px;
+}
+
+.modalFooter {
+  padding: 16px 20px;
+  display: flex;
+  justify-content: flex-end;
+  background: #fff;
+}
+
+.alertTable,
+.userTable,
+.responderTable {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.alertTable th,
+.alertTable td,
+.userTable th,
+.userTable td,
+.responderTable th,
+.responderTable td {
+  padding: 12px 14px;
+  border-bottom: 1px solid #e5e7eb;
+  text-align: left;
+}
+
+.alertTable th,
+.userTable th,
+.responderTable th {
+  background: #a30000;
+  font-weight: 700;
+}
+
+.alertTable th,
+.userTable th,
+.responderTable th {
+  color: white;
+  font-weight: 700;
+}
+
+.dispatchBtn {
+  margin-top: 8px;
+  background: #28a745;
+  color: white;
+  border: 2px solid #1e7e34;
+  padding: 12px 18px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-weight: 600;
+
+  position: relative;
+  overflow: hidden;
+
+  transition: color 0.3s ease;
+}
+
+.saveBtn,
+.closeBtn {
+  margin-top: 8px;
+  background: #a30000;
+  color: white;
+  border: 2px solid #a30000;
+  padding: 12px 18px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-weight: 600;
+
+  position: relative;
+  overflow: hidden;
+
+  transition: color 0.3s ease;
+}
+
+/* sliding white background */
+
+.saveBtn::before,
+.closeBtn::before,
+.dispatchBtn::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: white;
+  transition: left 0.35s ease;
+  z-index: 0;
+}
+
+/* keep text above slide */
+
+.saveBtn span,
+.closeBtn span,
+.dispatchBtn span {
+  position: relative;
+  z-index: 1;
+}
+
+/* slide animation */
+
+.saveBtn:hover::before,
+.closeBtn:hover::before,
+.dispatchBtn:hover::before {
+  left: 0;
+}
+
+/* hover text color */
+
+.saveBtn:hover,
+.closeBtn:hover {
+  color: #a30000;
+}
+
+.dispatchBtn:hover {
+  color: #1e7e34;
+}
+
+.modalContent {
+  background: white;
+  color: #000;
+  padding: 24px;
+  border-radius: 12px;
+  min-width: 320px;
+  max-width: 420px;
+}
+
+.lilmodalContent {
+  background: white;
+  color: #000;
+  padding: 24px;
+  text-align: center;
+  border-radius: 12px;
+  min-width: 320px;
+  max-width: 420px;
+}
+
+
+
+.modalTitle {
+  margin-top: 0;
+}
+
+/* STATUS BADGES */
+
+.statusAvailable {
+  background: #e6f9ec;
+  color: #0f7a3b;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 600;
+  display: inline-block;
+}
+
+.statusDispatched {
+  background: #ffe6e6;
+  color: #a30000;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 600;
+  display: inline-block;
+}
+
+.statusUnavailable {
+  background: #eeeeee;
+  color: #555;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 600;
+  display: inline-block;
+}
+
+.clickableRow {
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.clickableRow:hover {
+  background: #f8f8f8;
+}
+
+.alertDetailsWrap {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.alertImageWrap {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+
+.alertImage {
+  width: 100%;
+  max-width: 320px;
+  height: auto;
+  border-radius: 10px;
+  object-fit: cover;
+  border: 1px solid #ddd;
+}
+
+.noImageBox {
+  width: 100%;
+  max-width: 320px;
+  min-height: 180px;
+  border: 1px dashed #bbb;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #444;
+  background: #f5f5f5;
+}
+
+.alertDetailsInfo {
+  text-align: left;
+}
+
+.alertDetailsInfo p,
+.modalContent p {
+  color: #000;
+}
+
+.statusAvailable {
+  background: #e6f9ec;
+  color: #0f7a3b;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 600;
+  display: inline-block;
+}
+
+.statusDispatched {
+  background: #ffe6e6;
+  color: #a30000;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 600;
+  display: inline-block;
+}
+
+.statusUnavailable {
+  background: #eeeeee;
+  color: #555;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 600;
+  display: inline-block;
+}
+
+.dispatchBtn:disabled {
+  background: #cfcfcf;
+  border: 2px solid #cfcfcf;
+  color: #666;
+  cursor: not-allowed;
+  opacity: 0.8;
+}
+
+.dispatchBtn:disabled::before {
+  display: none;
+}
+
+.dispatchBtn:disabled:hover {
+  color: #666;
+}
+
+/* ALERT DETAILS MODAL (WIDE) */
+
+.alertDetailsModal {
+  background: white;
+  width: 900px;
+  max-width: 95%;
+  height: 90vh;
+  max-height: 80vh;
+
+  border-radius: 14px;
+  padding: 30px;
+
+  overflow-y: auto;
+
+  display: flex;
+  flex-direction: column;
+
+  box-shadow: 0 12px 35px rgba(0,0,0,0.25);
+}
+
+/* TITLE */
+.alertDetailsModal .modalTitle {
+  margin-bottom: 15px;
+}
+
+/* CONTENT AREA */
+.alertDetailsWrap {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* IMAGE */
+.alertImage {
+  width: 100%;
+  max-width: 500px;
+  border-radius: 10px;
+}
+
+/* DETAILS */
+.alertDetailsInfo {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px 20px;
+}
+
+/* BUTTON AREA */
+.modalFooter {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;          /* GAP BETWEEN BUTTONS */
+  margin-top: 20px;
+}
+
+/* ----------- VIEW MODAL ----------- */
+
+.modalViewOverlay {
+  position: fixed;
+  inset: 0;
+  backdrop-filter: blur(6px);
+  background: rgba(0, 0, 0, 0.45);
+
+  display: flex;
+  justify-content: center;
+  align-items: center;
+
+  z-index: 1000;
+  padding: 16px;
+}
+
+.modalViewContent {
+  background: #ffffff;
+  border-radius: 16px;
+  color: #000;
+
+  width: 100%;
+  max-width: 650px;
+
+  height: 90vh;
+  max-height: 90vh;
+
+  box-shadow: 0 12px 35px rgba(0, 0, 0, 0.25);
+
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.modalViewTitle {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #a30000;
+
+  text-align: center;
+
+  padding: 20px 24px 12px;
+
+  border-bottom: 2px solid #a30000;
+}
+
+.modalViewBody {
+  flex: 1;
+  overflow-y: auto;
+
+  padding: 18px 24px;
+
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.modalViewActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+
+  padding: 14px 24px 20px;
+
+  border-top: 1px solid #eee;
+}
+
+/* IMAGE */
+
+.alertImageSection {
+  width: 100%;
+  display: flex;
+  justify-content: center; /* center image */
+  align-items: center;
+}
+
+.alertImage {
+  width: 100%;
+  max-width: 420px;   /* prevents oversized images */
+  height: 260px;
+
+  object-fit: cover;
+
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+
+  display: block;
+}
+
+.noImageBox {
+  width: 100%;
+  max-width: 420px;
+  height: 260px;
+
+  border: 1px dashed #bbb;
+  border-radius: 12px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  color: #444;
+  background: #f5f5f5;
+
+  text-align: center;
+  padding: 16px;
+}
+
+/* DETAILS */
+
+.modalDetails {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.modalDetails p {
+  margin: 0;
+  color: #374151;
+  line-height: 1.5;
+}
+
+/* LABELS RED */
+
+.modalDetails strong,
+.modalDetails span {
+  color: #a30000;
+  font-weight: 700;
+}
+
+/* CLEAN LABEL + VALUE ALIGNMENT */
+
+.iconRow {
+  display: grid;
+  grid-template-columns: 110px 1fr;
+  gap: 10px;
+  align-items: start;
+}
+
+
+
+
+/* ---------------- MOBILE RESPONSIVE ---------------- */
+
+@media (max-width: 1024px) {
+  .modalWide {
+    width: 96%;
+    max-width: 96%;
+    height: 88vh;
+  }
+
+  .tabs {
+    gap: 36px;
+  }
+
+  .alertTable th,
+  .alertTable td,
+  .userTable th,
+  .userTable td,
+  .responderTable th,
+  .responderTable td {
+    padding: 10px 12px;
+    font-size: 0.9rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .container {
+    padding: 14px;
+  }
+
+  .contentSection {
+    padding: 14px;
+    border-radius: 10px;
+  }
+
+  .pageTitle {
+    font-size: 1.25rem;
+  }
+
+  .searchWrapper {
+    width: 100%;
+  }
+
+  .searchInput {
+    font-size: 0.9rem;
+  }
+
+  .tabs {
+    gap: 26px;
+    padding: 8px 0;
+    margin-bottom: 8px;
+  }
+
+  .tab {
+    font-size: 16px;
+    padding: 12px 6px;
+  }
+
+  .tabBadge {
+    top: -4px;
+    right: -14px;
+    min-width: 17px;
+    height: 17px;
+    font-size: 10px;
+  }
+
+  .modalOverlay,
+  .modalViewOverlay {
+    padding: 12px;
+  }
+
+  .modalWide {
+    width: 100%;
+    max-width: 100%;
+    height: 92vh;
+    border-radius: 12px;
+  }
+
+  .modalContent,
+  .lilmodalContent {
+    min-width: unset;
+    width: 100%;
+    max-width: 100%;
+    padding: 18px;
+  }
+
+  .modalTitle,
+  .modalViewTitle {
+    font-size: 1.2rem;
+  }
+
+  .modalTitleBar,
+  .modalBody,
+  .modalFooter,
+  .modalViewBody,
+  .modalViewActions {
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+
+  .modalBody,
+  .modalViewBody {
+    padding-top: 14px;
+    padding-bottom: 14px;
+  }
+
+  .modalFooter,
+  .modalViewActions,
+  .modalActions {
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .dispatchBtn,
+  .saveBtn,
+  .closeBtn,
+  .assignBtn,
+  .viewBtn,
+  .successCloseBtn {
+    width: 100%;
+    justify-content: center;
+    padding: 12px 16px;
+  }
+
+  .tableScroll {
+    max-height: unset;
+    overflow-x: auto;
+    overflow-y: auto;
+  }
+
+  .alertTable,
+  .userTable,
+  .responderTable {
+    min-width: 700px;
+  }
+
+  .alertPreviewImage {
+    max-width: 100%;
+    max-height: 260px;
+  }
+
+  .alertImage {
+    max-width: 100%;
+    height: 220px;
+  }
+
+  .noImageBox {
+    max-width: 100%;
+    height: 220px;
+  }
+
+  .iconRow {
+    grid-template-columns: 92px 1fr;
+    gap: 8px;
+  }
+
+  .successModal {
+    width: 100%;
+    max-width: 360px;
+    padding: 20px;
+  }
+
+  .successTitle {
+    font-size: 1.2rem;
+  }
+
+  .successMessage {
+    font-size: 0.95rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .container {
+    padding: 10px;
+  }
+
+  .contentSection {
+    padding: 12px;
+  }
+
+  .pageTitle {
+    font-size: 1.1rem;
+  }
+
+  .tabs {
+    gap: 18px;
+  }
+
+  .tab {
+    font-size: 14px;
+    padding: 10px 4px;
+    letter-spacing: 0.2px;
+  }
+
+  .tabBadge {
+    top: -3px;
+    right: -12px;
+    min-width: 16px;
+    height: 16px;
+    font-size: 9px;
+  }
+
+  .modalWide {
+    height: 94vh;
+    border-radius: 10px;
+  }
+
+  .modalTitle,
+  .modalViewTitle {
+    font-size: 1.05rem;
+    padding-top: 16px;
+    padding-bottom: 10px;
+  }
+
+  .modalBody,
+  .modalViewBody {
+    gap: 14px;
+  }
+
+  .alertTable,
+  .userTable,
+  .responderTable {
+    min-width: 640px;
+  }
+
+  .alertTable th,
+  .alertTable td,
+  .userTable th,
+  .userTable td,
+  .responderTable th,
+  .responderTable td {
+    padding: 9px 10px;
+    font-size: 0.82rem;
+  }
+
+  .alertImage,
+  .noImageBox {
+    height: 190px;
+  }
+
+  .iconRow {
+    grid-template-columns: 80px 1fr;
+    font-size: 0.9rem;
+  }
+
+  .modalDetails p {
+    font-size: 0.9rem;
+  }
+
+  .statusAvailable,
+  .statusDispatched,
+  .statusUnavailable {
+    font-size: 11px;
+    padding: 5px 10px;
+  }
 }

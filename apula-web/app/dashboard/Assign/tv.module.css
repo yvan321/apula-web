@@ -1,53 +1,46 @@
-/* MAIN */
-
-
 .container {
-  padding: 20px;
-  background-color: w;
-}
-
-.pageWrapper {
-  background: #e4e4e4;          /* light gray background */
+  padding: 24px;
+  background-color: #d9d9d9;
   min-height: 100vh;
-
 }
 
 .contentSection {
-  background: #fff;
-  padding: 20px;
-  border-radius: 12px;
-  box-shadow: 0 2px 6px rgba(255, 255, 255, 0.08);
+  background-color: white;
+  padding: 24px;
+  border-radius: 14px;
+  box-shadow: 0 6px 20px rgba(15, 23, 42, 0.08);
 }
 
 .pageTitle {
-  color: #800000;
-  font-size: 1.6rem;
+  color: #a30000;
+  font-size: 24px;
   font-weight: 700;
+  margin: 0;
 }
 
 .separator {
-  margin: 10px 0;
+  margin-top: 0.5rem;
+  margin-bottom: 1.5rem;
   border: 0;
-  border-top: 1px solid #ddd;
+  border-top: 1px solid #d1d5db;
 }
+
 
 /* SEARCH BAR */
 .searchWrapper {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  width: 50%;
-  gap: 80px;
-  margin-bottom: 15px;
+  width: min(100%, 700px);
+  gap: 16px;
+  margin-bottom: 16px;
 }
-
-
 
 /* SEARCH BOX */
 .searchBox {
   position: relative;
-  flex: 1 1 auto;       /* Allow shrinking */
-  min-width: 0;         /* Prevent overflow */
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 .searchIcon {
@@ -62,137 +55,245 @@
   width: 100%;
   height: 42px;
   padding: 10px 10px 10px 38px;
-  border: 1px solid #ccc;
+  border: 1px solid #d1d5db;
   border-radius: 20px;
   outline: none;
   font-size: 0.95rem;
+  background: #fff;
+  color: #111827;
 }
 
-
-/* ASSIGN BUTTON */
-.assignBtn {
-  background: #c00;
-  color: white;
-  border: none;
-  padding: 10px 24px;
-  border-radius: 6px;
-  cursor: pointer;
-  font-weight: 600;
-  height: 42px;
-  flex-shrink: 0;          /* ❗ Prevent button from shrinking or breaking */
-  white-space: nowrap;     /* Keep text in one line */
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-
-.assignBtn:hover {
-  background: #9a0000;
-}
-
-
-/* RESPONDER TABLE */
-.userTable {
+/* TABLES */
+.userTable,
+.alertTable,
+.responderTable {
   width: 100%;
   border-collapse: collapse;
   font-size: 0.95rem;
+  color: #111827;
 }
 
-.userTable th {
-  background: #8b0000;
+.userTable th,
+.alertTable th,
+.responderTable th {
+  background: #a30000;
   color: #fff;
-  padding: 10px;
+  padding: 12px 14px;
   text-align: left;
-}
-
-.userTable td {
-  padding: 10px;
-  border-bottom: 1px solid #eee;
-  color: black;
-}
-
-.statusAvailable {
-  color: #28a745;
   font-weight: 700;
+}
+
+.userTable td,
+.alertTable td,
+.responderTable td {
+  padding: 12px 14px;
+  border-bottom: 1px solid #e5e7eb;
+  color: black;
+  vertical-align: middle;
+}
+
+.userTable tbody tr:hover,
+.alertTable tbody tr:hover,
+.responderTable tbody tr:hover {
+  background: #fafafa;
+}
+
+/* STATUS BADGES */
+.statusAvailable {
+  background: #e6f9ec;
+  color: #0f7a3b;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 600;
+  display: inline-block;
 }
 
 .statusDispatched {
-  color: #dc3545;
-  font-weight: 700;
+  background: #ffe6e6;
+  color: #a30000;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 600;
+  display: inline-block;
 }
+
 .statusUnavailable {
-  background: #000;
-  color: #fff;
-  padding: 6px 10px;
-  border-radius: 6px;
-  font-weight: bold;
+  background: #eeeeee;
+  color: #555;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 600;
+  display: inline-block;
 }
-/* ACTION BUTTONS */
+
+/* BUTTONS */
+.assignBtn {
+  background: #28a745;
+  color: white;
+  border: 2px solid #1e7e34;
+  padding: 12px 18px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-weight: 600;
+  height: 42px;
+  flex-shrink: 0;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+  transition: color 0.3s ease;
+}
+
 .dispatchBtn {
   background: #28a745;
   color: white;
-  border: none;
-  padding: 6px 10px;
-  border-radius: 6px;
+  border: 2px solid #1e7e34;
+  padding: 12px 18px;
+  border-radius: 10px;
   cursor: pointer;
   font-weight: 600;
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 5px;
+  gap: 6px;
+  position: relative;
+  overflow: hidden;
+  transition: color 0.3s ease;
 }
 
-.viewBtn {
-  background: #f89c1b;
+.viewBtn,
+.closeBtn,
+.successCloseBtn {
+  background: #a30000;
   color: white;
-  border: none;
-  padding: 6px 10px;
-  border-radius: 6px;
+  border: 2px solid #a30000;
+  padding: 12px 18px;
+  border-radius: 10px;
   cursor: pointer;
   font-weight: 600;
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 5px;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+  transition: color 0.3s ease;
+}
+
+/* sliding white background */
+.assignBtn::before,
+.dispatchBtn::before,
+.viewBtn::before,
+.closeBtn::before,
+.successCloseBtn::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: white;
+  transition: left 0.35s ease;
+  z-index: 0;
+}
+
+/* keep text above slide */
+.assignBtn span,
+.dispatchBtn span,
+.viewBtn span,
+.closeBtn span,
+.successCloseBtn span {
+  position: relative;
+  z-index: 1;
+}
+
+/* slide animation */
+.assignBtn:hover::before,
+.dispatchBtn:hover::before,
+.viewBtn:hover::before,
+.closeBtn:hover::before,
+.successCloseBtn:hover::before {
+  left: 0;
+}
+
+.assignBtn:hover,
+.dispatchBtn:hover {
+  color: #1e7e34;
+}
+
+.viewBtn:hover,
+.closeBtn:hover,
+.successCloseBtn:hover {
+  color: #a30000;
 }
 
 /* MODAL BASE */
 .modalOverlay {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.5);
+  background: rgba(0, 0, 0, 0.45);
   display: flex;
   justify-content: center;
   align-items: center;
-  padding: 10px;
+  padding: 40px;
   z-index: 9999;
 }
 
 .modalContent {
   background: #fff;
   color: #000;
-  padding: 20px;
   border-radius: 12px;
-  width: 400px;
-  max-width: 95%;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+  width: 100%;
+  max-width: 420px;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
 }
 
 .modalWide {
   background: #fff;
-  padding: 20px;
-  border-radius: 12px;
-  width: 80%;
-  max-width: 900px;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.25);
-}
-
-.modalWide h3 {
+  border-radius: 16px;
+  width: 85%;
+  max-width: 950px;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.25);
   color: black;
 }
 
+.modalWide h3,
 .modalWide label {
   color: black;
+}
 
+/* MODAL LAYOUT */
+.modalHeader {
+  padding: 18px 24px;
+  border-bottom: 1px solid #e5e7eb;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.modalBody {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px 24px;
+}
+
+.modalFooter {
+  padding: 18px 24px;
+  border-top: 1px solid #e5e7eb;
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  flex-shrink: 0;
 }
 
 /* MODAL TITLES */
@@ -200,11 +301,11 @@
   font-size: 1.4rem;
   font-weight: 700;
   color: #800000;
-  margin-bottom: 15px;
+  margin: 0;
+  text-align: center;
 }
 
-/* Small Notice Modal */
-
+/* NOTICE MODAL */
 .noticeOverlay {
   position: fixed;
   inset: 0;
@@ -255,51 +356,13 @@
   }
 }
 
-
 /* SCROLLABLE AREA */
 .tableScroll {
-  max-height: 400px;
+  max-height: 420px;
   overflow-y: auto;
-  margin-bottom: 15px;
+  margin-bottom: 0;
   border: 1px solid #ddd;
-  border-radius: 6px;
-}
-
-/* ALERT TABLE */
-.alertTable {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.alertTable th {
-  background: #800000;
-  color: #fff;
-  padding: 10px;
-  font-size: 0.9rem;
-}
-
-.alertTable td {
-  border-bottom: 1px solid #eee;
-  padding: 10px;
-  font-size: 0.9rem;
-}
-
-/* RESPONDER TABLE IN MODAL */
-.responderTable {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.responderTable th {
-  background: #800000;
-  color: #fff;
-  padding: 10px;
-}
-
-.responderTable td {
-  padding: 10px;
-  border-bottom: 1px solid #eee;
-  color: black;
+  border-radius: 8px;
 }
 
 /* SELECT ALL */
@@ -309,26 +372,8 @@
   gap: 8px;
   margin-bottom: 12px;
   font-weight: 600;
+  color: #111827;
 }
-
-/* BUTTONS */
-
-
-.assignBtn:hover {
-  background: #9a0000;
-}
-
-.closeBtn {
-  background: #555;
-  color: white;
-  border: none;
-  padding: 8px 12px;
-  border-radius: 6px;
-  cursor: pointer;
-  font-weight: 600;
-}
-
-
 
 .modalActions {
   display: flex;
@@ -343,16 +388,16 @@
   font-size: 0.95rem;
 }
 
-
 /* SUCCESS MODAL */
 .successModal {
   background: #ffffff;
   width: 380px;
+  max-width: 90%;
   padding: 25px;
   border-radius: 14px;
   text-align: center;
   animation: fadeInScale 0.25s ease;
-  box-shadow: 0 4px 15px rgba(0,0,0,0.25);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.25);
 }
 
 .successIcon {
@@ -375,18 +420,21 @@
   margin-bottom: 20px;
 }
 
-.successCloseBtn {
-  background: #28a745;
-  color: #fff;
-  border: none;
-  padding: 10px 18px;
+/* FORM ELEMENTS INSIDE MODAL */
+.responderTable select {
+  width: 100%;
+  min-width: 160px;
+  padding: 8px 10px;
+  border: 1px solid #d1d5db;
   border-radius: 8px;
-  cursor: pointer;
-  font-weight: bold;
+  background: #fff;
+  color: #111827;
+  outline: none;
 }
 
-.successCloseBtn:hover {
-  background: #1e7e34;
+.responderTable input[type="checkbox"] {
+  transform: scale(1.05);
+  cursor: pointer;
 }
 
 /* Animation */
@@ -398,5 +446,74 @@
   to {
     opacity: 1;
     transform: scale(1);
+  }
+}
+
+/* MOBILE */
+@media (max-width: 768px) {
+  .container {
+    padding: 14px;
+  }
+
+  .contentSection {
+    padding: 14px;
+    border-radius: 12px;
+  }
+
+  .pageTitle {
+    font-size: 1.15rem;
+  }
+
+  .searchWrapper {
+    width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .modalOverlay {
+    padding: 16px;
+  }
+
+  .modalWide {
+    width: 100%;
+    max-width: 100%;
+    max-height: 90vh;
+    border-radius: 12px;
+  }
+
+  .modalContent {
+    max-width: 100%;
+  }
+
+  .modalHeader,
+  .modalBody,
+  .modalFooter {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  .userTable,
+  .alertTable,
+  .responderTable {
+    min-width: 640px;
+  }
+
+  .tableScroll {
+    overflow-x: auto;
+  }
+
+  .assignBtn,
+  .dispatchBtn,
+  .viewBtn,
+  .closeBtn,
+  .successCloseBtn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .modalFooter,
+  .modalActions {
+    flex-wrap: wrap;
   }
 }
