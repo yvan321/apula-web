@@ -8,8 +8,11 @@ import { collection, query, where, onSnapshot } from "firebase/firestore";
 
 const AlertBellButton = () => {
   const [alertCount, setAlertCount] = useState(0);
+  const [backupCount, setBackupCount] = useState(0);
   const [audio, setAudio] = useState<HTMLAudioElement | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
+
+  const totalCount = alertCount + backupCount;
 
   // 🔊 Initialize alarm sound
   useEffect(() => {
@@ -32,21 +35,35 @@ const AlertBellButton = () => {
     return () => unsub();
   }, []);
 
-  // 🔊 Play sound if alerts exist
+  // 🚒 Real-time listen to pending backup requests
+  useEffect(() => {
+    const q = query(
+      collection(db, "backupRequests"),
+      where("status", "==", "Pending")
+    );
+
+    const unsub = onSnapshot(q, (snap) => {
+      setBackupCount(snap.size);
+    });
+
+    return () => unsub();
+  }, []);
+
+  // 🔊 Play sound if alerts or backup requests exist
   useEffect(() => {
     if (!audio) return;
 
-    if (alertCount > 0 && !isPlaying) {
+    if (totalCount > 0 && !isPlaying) {
       audio.play().catch(() => {});
       setIsPlaying(true);
     }
 
-    if (alertCount === 0 && isPlaying) {
+    if (totalCount === 0 && isPlaying) {
       audio.pause();
       audio.currentTime = 0;
       setIsPlaying(false);
     }
-  }, [alertCount, audio]);
+  }, [totalCount, audio, isPlaying]);
 
   const handleClick = () => {
     window.dispatchEvent(new Event("open-alert-dispatch"));
@@ -56,9 +73,9 @@ const AlertBellButton = () => {
     <button className={styles.floatingBell} onClick={handleClick}>
       <FaBell className={styles.icon} />
 
-      {/* 🔴 Badge */}
-      {alertCount > 0 && (
-        <span className={styles.badge}>{alertCount}</span>
+      {/* 🔴 Badge = alerts + backup requests */}
+      {totalCount > 0 && (
+        <span className={styles.badge}>{totalCount}</span>
       )}
     </button>
   );
