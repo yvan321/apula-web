@@ -6,13 +6,12 @@
 
 .container {
   padding: 24px;
-  color: #cfd7e8;
-  background-color: #d9d9d9;
+  background-color: var(--app-bg);
   min-height: 100vh;
 }
 
 .contentSection {
-  background-color: white;
+  background-color: var(--panel-bg);
   color: var(--panel-text);
   padding: 24px;
   border-radius: var(--card-radius);
@@ -58,8 +57,8 @@
   justify-content: center;
   text-align: left;
   border: 2px solid var(--card-border);
-  background: white;
-  color: black;
+  background: var(--card-bg);
+  color: var(--card-text);
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
   transition: transform 0.25s ease, box-shadow 0.25s ease;
 }
@@ -83,7 +82,7 @@
 }
 
 .cardIcon {
-  font-size: 32px;
+  font-size: 24px;
   opacity: 0.95;
   color: inherit;
 }
@@ -108,29 +107,24 @@
 
 /* ================= CARD COLORWAY ================= */
 
-/* ================= CARD COLORWAY (MODERN OUTLINE STYLE) ================= */
+.card {
+  border-color: #2b6cb0;
+  box-shadow: 0 8px 24px rgba(43, 108, 176, 0.2);
+}
 
-.card,
-.cardCritical,
-.cardSuccess,
 .cardInfo {
-  background: white;
-  color: black;
-  border: 4px solid black; /* red outline */
+  border-color: #e67e22;
+  box-shadow: 0 8px 24px rgba(230, 126, 34, 0.2);
 }
 
-/* icon color */
-.cardIcon {
-  color: #a30000;
+.cardCritical {
+  border-color: #d12c2c;
+  box-shadow: 0 8px 24px rgba(209, 44, 44, 0.2);
 }
 
-/* label text */
-.cardLabel {
-  color: #000;
-}
-
-.bigNumber {
-  color: #000;
+.cardSuccess {
+  border-color: #22a06b;
+  box-shadow: 0 8px 24px rgba(34, 160, 107, 0.2);
 }
 
 /* Weather override */
@@ -196,55 +190,6 @@
   -webkit-overflow-scrolling: touch;
 }
 
-.viewMoreBtn {
-  position: relative;
-  overflow: hidden;
-
-  background: #a30000;
-  color: white;
-  border: 2px solid #a30000;
-
-  padding: 8px 18px;
-  border-radius: 10px;
-  cursor: pointer;
-
-  font-weight: 600;
-  font-size: 14px;
-
-  transition: color 0.3s ease;
-}
-
-/* sliding white background */
-.viewMoreBtn::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: -100%;
-
-  width: 100%;
-  height: 100%;
-  background: white;
-
-  transition: left 0.35s ease;
-  z-index: 0;
-}
-
-/* keep text above slide */
-.viewMoreBtn span {
-  position: relative;
-  z-index: 1;
-}
-
-/* slide animation */
-.viewMoreBtn:hover::before {
-  left: 0;
-}
-
-/* hover text color */
-.viewMoreBtn:hover {
-  color: #a30000;
-}
-
 /* Sticky title (optional but recommended) */
 .modalTitle {
   font-size: 1.4rem;
@@ -263,16 +208,15 @@
 /* Chart area scales properly */
 .chartContainer {
   width: 100%;
-  height: 260px;
+  height: 320px;
   margin-top: 16px;
   background: #ffffff;
   border-radius: 14px;
   border: 1px solid #e5e7eb;
-  padding: 12px 8px 12px 0;
+  padding: 14px;
   box-sizing: border-box;
   min-width: 0;
-  overflow-x: auto;
-  overflow-y: hidden;
+  overflow: hidden;
 }
 
 .chartContainer :global(.recharts-wrapper),
@@ -350,6 +294,29 @@
   align-items: stretch;
 }
 
+.analyticsActions {
+  margin-top: 14px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.downloadBtn {
+  border: 1px solid #a30000;
+  background: #a30000;
+  color: #ffffff;
+  padding: 10px 16px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.downloadBtn:hover {
+  background: #850000;
+  border-color: #850000;
+}
+
 /* ================= BUTTON ================= */
 
 .closeBtn {
@@ -399,6 +366,14 @@
 
   .chartsGrid {
     grid-template-columns: 1fr;
+  }
+
+  .analyticsActions {
+    justify-content: stretch;
+  }
+
+  .downloadBtn {
+    width: 100%;
   }
 
   .bigNumber {

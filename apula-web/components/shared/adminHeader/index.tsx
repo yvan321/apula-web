@@ -14,7 +14,8 @@ import {
   LogOut,
   Send,
   ClipboardList,
-  Car,
+  CarFront, Car,
+  MapPin,
   Menu,
   X,
 } from "lucide-react";
@@ -64,24 +65,23 @@ export default function AdminHeader() {
     window.location.href = "/login";
   };
 
-  // 🔊 INITIALIZE LOOPING SOUND
+  // 🔊 INITIALIZE LOOPING SOUND (GLOBAL)
   useEffect(() => {
     const audioElement = new Audio("/sounds/fire_alarm.mp3");
-    audioElement.loop = true;
+    audioElement.loop = true; // keep looping
     setAudio(audioElement);
   }, []);
 
-  // 🔥 Realtime unread count
+  // 🔥 Realtime unread count (GLOBAL)
   useEffect(() => {
     const q = query(collection(db, "alerts"), where("read", "==", false));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       setUnreadCount(snapshot.size);
     });
-
     return () => unsubscribe();
   }, []);
 
-  // 🔊 Play or stop sound based on unread count
+  // 🔊 Play or stop sound based on unreadCount (GLOBAL)
   useEffect(() => {
     if (!audio) return;
 
@@ -95,60 +95,35 @@ export default function AdminHeader() {
       audio.currentTime = 0;
       setIsPlaying(false);
     }
-  }, [unreadCount, audio, isPlaying]);
+  }, [unreadCount, audio]);
 
-  // 👤 Load actual admin name and role from Firestore
+  // 👤 Load user name/role
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (!user) {
         setUserName("Guest");
         setInitial(getFirstNameInitial("Guest"));
-        setRole("admin");
         return;
       }
 
       try {
-        console.log("Logged in UID:", user.uid);
+        const userDoc = await getDoc(doc(db, "users", user.uid));
+        if (userDoc.exists()) {
+          const data = userDoc.data();
+          const name = data.name || "User";
 
-        const userRef = doc(db, "users", user.uid);
-        const userSnap = await getDoc(userRef);
-
-        if (userSnap.exists()) {
-          const data = userSnap.data();
-          console.log("Firestore user data:", data);
-
-          const actualName =
-            data.name?.trim() ||
-            user.displayName ||
-            user.email?.split("@")[0] ||
-            "User";
-
-          setUserName(actualName);
-          setInitial(getFirstNameInitial(actualName));
+          setUserName(name);
+          setInitial(getFirstNameInitial(name));
           setRole(data.role || "admin");
         } else {
-          console.log("No Firestore document found for UID:", user.uid);
-
-          const fallbackName =
-            user.displayName ||
-            user.email?.split("@")[0] ||
-            "User";
-
-          setUserName(fallbackName);
-          setInitial(getFirstNameInitial(fallbackName));
-          setRole("admin");
+          const display = user.displayName || "User";
+          setUserName(display);
+          setInitial(getFirstNameInitial(display || user.email || "User"));
         }
       } catch (err) {
         console.error("Error fetching user data:", err);
-
-        const fallbackName =
-          user.displayName ||
-          user.email?.split("@")[0] ||
-          "User";
-
-        setUserName(fallbackName);
-        setInitial(getFirstNameInitial(fallbackName));
-        setRole("admin");
+        setUserName("User");
+        setInitial(getFirstNameInitial("User"));
       }
     });
 
@@ -158,9 +133,7 @@ export default function AdminHeader() {
   return (
     <>
       {/* Sidebar */}
-      <aside
-        className={`${styles.sidebar} ${sidebarOpen ? styles.sidebarOpen : ""}`}
-      >
+      <aside className={`${styles.sidebar} ${sidebarOpen ? styles.sidebarOpen : ""}`}>
         <div className={styles.sidebarHeader}>
           <Image src="/logo.png" alt="Sidebar Logo" width={150} height={75} />
           <button
@@ -176,9 +149,7 @@ export default function AdminHeader() {
         <nav className={styles.sidebarNav}>
           <a
             href="/dashboard"
-            className={`${styles.sidebarLink} ${
-              isActive("/dashboard") ? styles.activeLink : ""
-            }`}
+            className={`${styles.sidebarLink} ${isActive("/dashboard") ? styles.activeLink : ""}`}
             onClick={() => setSidebarOpen(false)}
           >
             <LayoutDashboard size={18} className={styles.icon} />
@@ -206,9 +177,7 @@ export default function AdminHeader() {
           {role === "superadmin" && (
             <a
               href="/dashboard/users"
-              className={`${styles.sidebarLink} ${
-                isActive("/dashboard/users") ? styles.activeLink : ""
-              }`}
+              className={`${styles.sidebarLink} ${isActive("/dashboard/users") ? styles.activeLink : ""}`}
               onClick={() => setSidebarOpen(false)}
             >
               <Users size={18} className={styles.icon} />
@@ -227,29 +196,42 @@ export default function AdminHeader() {
             <span>Request</span>
           </a>
 
+<a
+  href="/dashboard/Management"
+  className={`${styles.sidebarLink} ${
+    isActive("/dashboard/Management") ? styles.activeLink : ""
+  }`}
+  onClick={() => setSidebarOpen(false)}
+>
+  <Car size={18} className={styles.icon} />
+  <span>Truck & Team</span>
+</a>
+
+
           <a
-            href="/dashboard/Management"
+  href="/dashboard/Assign"
+  className={`${styles.sidebarLink} ${
+    isActive("/dashboard/Assign") ? styles.activeLink : ""
+  }`}
+            onClick={() => setSidebarOpen(false)}
+>
+  <ClipboardList size={18} className={styles.icon} />
+<span>Assign</span>
+
+</a>
+
+          <a
+            href="/dashboard/stations"
             className={`${styles.sidebarLink} ${
-              isActive("/dashboard/Management") ? styles.activeLink : ""
+              isActive("/dashboard/stations") ? styles.activeLink : ""
             }`}
             onClick={() => setSidebarOpen(false)}
           >
-            <Car size={18} className={styles.icon} />
-            <span>Truck & Team</span>
+            <MapPin size={18} className={styles.icon} />
+            <span>Stations</span>
           </a>
 
-          <a
-            href="/dashboard/Assign"
-            className={`${styles.sidebarLink} ${
-              isActive("/dashboard/Assign") ? styles.activeLink : ""
-            }`}
-            onClick={() => setSidebarOpen(false)}
-          >
-            <ClipboardList size={18} className={styles.icon} />
-            <span>Assign</span>
-          </a>
-
-          <a
+          {<a
             href="/dashboard/dispatch"
             className={`${styles.sidebarLink} ${
               isActive("/dashboard/dispatch") ? styles.activeLink : ""
@@ -258,7 +240,7 @@ export default function AdminHeader() {
           >
             <Send size={18} className={styles.icon} />
             <span>Dispatch</span>
-          </a>
+          </a>/* DISPATCHER ONLY */}
 
           <a
             href="/dashboard/reports"
@@ -300,17 +282,10 @@ export default function AdminHeader() {
       <header className={styles.header}>
         <div className={styles.logoWrapper}>
           <div className={styles.menuWrapper}>
-            <button
-              className={styles.menuButton}
-              onClick={toggleSidebar}
-              aria-label="Open sidebar"
-              type="button"
-            >
+            <button className={styles.menuButton} onClick={toggleSidebar} aria-label="Open sidebar" type="button">
               <Menu size={22} />
             </button>
-            {unreadCount > 0 && (
-              <span className={styles.menuBadge}>{unreadCount}</span>
-            )}
+            {unreadCount > 0 && <span className={styles.menuBadge}>{unreadCount}</span>}
           </div>
           <Image src="/logo.png" alt="Logo" width={100} height={50} />
         </div>

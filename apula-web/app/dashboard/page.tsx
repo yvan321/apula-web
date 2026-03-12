@@ -3,7 +3,6 @@
 import React, { useState, useEffect } from "react";
 import AdminHeader from "@/components/shared/adminHeader";
 import styles from "./adminDashboardStyles.module.css";
-import { useRouter } from "next/navigation";
 
 import {
   FaFire,
@@ -23,6 +22,8 @@ import AlertDispatchModal from "@/components/AlertDispatch/AlertDispatchModal";
 import {
   LineChart,
   Line,
+  BarChart,
+  Bar,
   XAxis,
   YAxis,
   Tooltip,
@@ -39,8 +40,6 @@ type ChartPoint = {
 };
 
 const AdminDashboard = () => {
-  const router = useRouter();
-
   /* ================= COUNTERS ================= */
   const [activeAlertCount, setActiveAlertCount] = useState(0);
   const [availableResponders, setAvailableResponders] = useState(0);
@@ -56,9 +55,33 @@ const AdminDashboard = () => {
   const [chartData, setChartData] = useState<ChartPoint[]>([]);
   const [alertsDates, setAlertsDates] = useState<Date[]>([]);
 
+  const periodLabelMap: Record<Period, string> = {
+    week: "Week",
+    month: "Month",
+    year: "Year",
+  };
+
+  const monthNames = [
+    "January",
+    "February",
+    "March",
+    "April",
+    "May",
+    "June",
+    "July",
+    "August",
+    "September",
+    "October",
+    "November",
+    "December",
+  ];
+
   /* ================= ACTIVE FIRE ALERTS ================= */
   useEffect(() => {
-    const q = query(collection(db, "alerts"), where("status", "==", "Pending"));
+    const q = query(
+      collection(db, "alerts"),
+      where("status", "!=", "Resolved")
+    );
 
     const unsub = onSnapshot(q, (snap) => {
       setActiveAlertCount(snap.size);
@@ -136,8 +159,6 @@ const AdminDashboard = () => {
           d = new Date(data.timestamp.seconds * 1000);
         } else if (typeof data.timestamp === "string") {
           d = new Date(data.timestamp);
-        } else if (data.timestamp instanceof Date) {
-          d = data.timestamp;
         }
 
         if (!d || isNaN(d.getTime())) return;
@@ -147,17 +168,12 @@ const AdminDashboard = () => {
 
       setAlertsDates(parsedDates);
 
-      const years = Array.from(
-        new Set(parsedDates.map((d) => d.getFullYear()))
-      ).sort((a, b) => a - b);
-
-      const currentYear = new Date().getFullYear();
-      const finalYears = years.length > 0 ? years : [currentYear];
-
-      setAvailableYears(finalYears);
-
-      if (!finalYears.includes(selectedYear)) {
-        setSelectedYear(finalYears[finalYears.length - 1]);
+      const years = Array.from(new Set(parsedDates.map((d) => d.getFullYear()))).sort(
+        (a, b) => b - a
+      );
+      setAvailableYears(years);
+      if (years.length > 0 && !years.includes(selectedYear)) {
+        setSelectedYear(years[0]);
       }
     });
 
@@ -184,7 +200,6 @@ const AdminDashboard = () => {
         if (!rawDate) return;
 
         let resolvedDate: Date | null = null;
-
         if (rawDate?.seconds) {
           resolvedDate = new Date(rawDate.seconds * 1000);
         } else if (typeof rawDate === "string") {
@@ -208,72 +223,34 @@ const AdminDashboard = () => {
 
   /* ================= PERIOD AGGREGATION ================= */
   useEffect(() => {
+    const now = new Date();
+    const referenceDate = new Date(selectedYear, now.getMonth(), now.getDate());
+
     if (selectedPeriod === "week") {
-      const currentYear = new Date().getFullYear();
-
-      let referenceDate: Date;
-
-      if (selectedYear === currentYear) {
-        referenceDate = new Date();
-      } else {
-        const datesInSelectedYear = alertsDates.filter(
-          (d) => d.getFullYear() === selectedYear
-        );
-
-        referenceDate =
-          datesInSelectedYear.length > 0
-            ? new Date(
-                Math.max(...datesInSelectedYear.map((d) => d.getTime()))
-              )
-            : new Date(selectedYear, 11, 31);
-      }
-
       const weekStart = new Date(referenceDate);
-      const day = weekStart.getDay();
-      const diffToMonday = day === 0 ? -6 : 1 - day;
-      weekStart.setDate(weekStart.getDate() + diffToMonday);
+      const weekEnd = new Date(referenceDate);
+      weekStart.setDate(referenceDate.getDate() - 6);
       weekStart.setHours(0, 0, 0, 0);
-
-      const weekEnd = new Date(weekStart);
-      weekEnd.setDate(weekStart.getDate() + 6);
       weekEnd.setHours(23, 59, 59, 999);
 
       const buckets: ChartPoint[] = Array.from({ length: 7 }, (_, index) => {
         const d = new Date(weekStart);
         d.setDate(weekStart.getDate() + index);
-
         return {
-          label: d.toLocaleDateString("en-US", {
-            weekday: "short",
-            month: "short",
-            day: "numeric",
-          }),
-          fullDate: d.toLocaleDateString("en-US", {
-            weekday: "long",
-            month: "long",
-            day: "numeric",
-            year: "numeric",
-          }),
+          label: `${d.toLocaleDateString("en-US", { weekday: "short" })} ${d.getDate()}`,
           alerts: 0,
         };
       });
 
       alertsDates.forEach((d) => {
         if (d < weekStart || d > weekEnd) return;
-
-        const alertDay = new Date(d.getFullYear(), d.getMonth(), d.getDate());
-        const startDay = new Date(
-          weekStart.getFullYear(),
-          weekStart.getMonth(),
-          weekStart.getDate()
+        const dayIndex = Math.floor(
+          (new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime() - weekStart.getTime()) /
+            (1000 * 60 * 60 * 24)
         );
 
-        const diffDays = Math.floor(
-          (alertDay.getTime() - startDay.getTime()) / (1000 * 60 * 60 * 24)
-        );
-
-        if (diffDays >= 0 && diffDays < 7) {
-          buckets[diffDays].alerts += 1;
+        if (dayIndex >= 0 && dayIndex < 7) {
+          buckets[dayIndex].alerts += 1;
         }
       });
 
@@ -282,46 +259,83 @@ const AdminDashboard = () => {
     }
 
     if (selectedPeriod === "month") {
-      const monthNames = [
-        "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-        "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
-      ];
-
-      const buckets: ChartPoint[] = monthNames.map((month, index) => ({
-        label: month,
-        fullDate: `${month} ${selectedYear}`,
-        alerts: 0,
-      }));
+      const monthly = Array(12).fill(0);
 
       alertsDates.forEach((d) => {
         if (d.getFullYear() === selectedYear) {
-          buckets[d.getMonth()].alerts += 1;
+          monthly[d.getMonth()] += 1;
         }
       });
 
-      setChartData(buckets);
+      setChartData(
+        monthly.map((count, index) => ({
+          label: monthNames[index],
+          alerts: count,
+          fullDate: `${monthNames[index]} ${selectedYear}`,
+        }))
+      );
       return;
     }
 
-    const yearlyBuckets = availableYears.map((year) => ({
-      label: String(year),
-      fullDate: String(year),
-      alerts: 0,
-    }));
+    const yearsForChart =
+      availableYears.length > 0
+        ? [...availableYears].sort((a, b) => a - b)
+        : [selectedYear];
+
+    const yearlyBuckets: Record<number, number> = {};
+    yearsForChart.forEach((year) => {
+      yearlyBuckets[year] = 0;
+    });
 
     alertsDates.forEach((d) => {
-      const index = availableYears.indexOf(d.getFullYear());
-      if (index !== -1) {
-        yearlyBuckets[index].alerts += 1;
+      const year = d.getFullYear();
+      if (yearlyBuckets[year] !== undefined) {
+        yearlyBuckets[year] += 1;
       }
     });
 
-    setChartData(yearlyBuckets);
+    setChartData(
+      yearsForChart.map((year) => ({
+        label: String(year),
+        alerts: yearlyBuckets[year] ?? 0,
+      }))
+    );
   }, [alertsDates, selectedPeriod, selectedYear, availableYears]);
 
   const tooltipLabelFormatter = (label: string | number) => {
+    if (selectedPeriod !== "month") return String(label);
     const point = chartData.find((entry) => entry.label === String(label));
     return point?.fullDate || String(label);
+  };
+
+  const downloadChartData = () => {
+    const csvRows = [
+      ["Period", "Year", "Label", "Alerts"],
+      ...chartData.map((point) => [
+        periodLabelMap[selectedPeriod],
+        selectedPeriod === "year" ? "All Years" : String(selectedYear),
+        point.fullDate || point.label,
+        String(point.alerts),
+      ]),
+    ];
+
+    const csvContent = csvRows
+      .map((row) =>
+        row
+          .map((value) => `"${String(value).replace(/"/g, '""')}"`)
+          .join(",")
+      )
+      .join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `fire-incidents-${selectedPeriod}-${selectedYear}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
   return (
@@ -339,6 +353,7 @@ const AdminDashboard = () => {
           <h2 className={styles.pageTitle}>Fire Command Center</h2>
           <hr className={styles.separator} />
 
+          {/* ROW 1 */}
           <div className={styles.row}>
             <div className={styles.cardCritical}>
               <div className={styles.cardTop}>
@@ -347,39 +362,8 @@ const AdminDashboard = () => {
               </div>
               <span className={styles.cardLabel}>Active Fire Incidents</span>
             </div>
-            
-            
 
             <div className={styles.cardSuccess}>
-              <div className={styles.cardTop}>
-                <FaCheckCircle className={styles.cardIcon} />
-                <p className={styles.bigNumber}>{resolvedTodayCount}</p>
-              </div>
-              <span className={styles.cardLabel}>Resolved Fire Incidents (Today)</span>
-            </div>
-
-          <div className={styles.cardInfo}>
-              <div className={styles.cardTop}>
-                <FaUserClock className={styles.cardIcon} />
-                <p className={styles.bigNumber}>{dispatchedResponders}</p>
-              </div>
-              <span className={styles.cardLabel}>Dispatched Responders</span>
-            </div>
-
-            
-          </div>
-
-          {/* ROW 2 */}
-          <div className={styles.row}>
-            <div className={styles.card}>
-              <div className={styles.cardTop}>
-                <FaUserCheck className={styles.cardIcon} />
-                <p className={styles.bigNumber}>{availableResponders}</p>
-              </div>
-              <span className={styles.cardLabel}>Responders Available</span>
-            </div>
-
-              <div className={styles.card}>
               <div className={styles.cardTop}>
                 <FaUsers className={styles.cardIcon} />
                 <p className={styles.bigNumber}>{availableTeams}</p>
@@ -396,33 +380,55 @@ const AdminDashboard = () => {
             </div>
           </div>
 
-         
+          {/* ROW 2 */}
+          <div className={styles.row}>
+            <div className={styles.cardSuccess}>
+              <div className={styles.cardTop}>
+                <FaUserCheck className={styles.cardIcon} />
+                <p className={styles.bigNumber}>{availableResponders}</p>
+              </div>
+              <span className={styles.cardLabel}>Responders Available</span>
+            </div>
+
+            <div className={styles.cardInfo}>
+              <div className={styles.cardTop}>
+                <FaUserClock className={styles.cardIcon} />
+                <p className={styles.bigNumber}>{dispatchedResponders}</p>
+              </div>
+              <span className={styles.cardLabel}>Dispatched Responders</span>
+            </div>
+
+            <div className={styles.cardSuccess}>
+              <div className={styles.cardTop}>
+                <FaCheckCircle className={styles.cardIcon} />
+                <p className={styles.bigNumber}>{resolvedTodayCount}</p>
+              </div>
+              <span className={styles.cardLabel}>Resolved Fire Incidents (Today)</span>
+            </div>
+          </div>
+
           <div className={styles.analyticsSection}>
             <div className={styles.analyticsHeader}>
-              <h2 className={styles.analyticsTitle}>Fire Incidents Overview</h2>
+              <h2 className={styles.analyticsTitle}>
+                Fire Incidents Overview
+                {selectedPeriod === "year"
+                  ? ` (${periodLabelMap[selectedPeriod]})`
+                  : ` (${periodLabelMap[selectedPeriod]} ${selectedYear})`}
+              </h2>
 
-              <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
-                {selectedPeriod !== "year" && (
-                  <select
-                    className={styles.yearSelect}
-                    value={selectedYear}
-                    onChange={(e) => setSelectedYear(Number(e.target.value))}
-                  >
-                    {availableYears.map((year) => (
-                      <option key={year} value={year}>
-                        {year}
-                      </option>
-                    ))}
-                  </select>
-                )}
-
-                <button
-                  className={styles.viewMoreBtn}
-                  onClick={() => router.push("/dashboard/analytics")}
+              {selectedPeriod !== "year" && (
+                <select
+                  className={styles.yearSelect}
+                  value={selectedYear}
+                  onChange={(e) => setSelectedYear(Number(e.target.value))}
                 >
-                  <span>View More</span>
-                </button>
-              </div>
+                  {availableYears.map((year) => (
+                    <option key={year} value={year}>
+                      {year}
+                    </option>
+                  ))}
+                </select>
+              )}
             </div>
 
             <div className={styles.periodSwitcher}>
@@ -442,33 +448,49 @@ const AdminDashboard = () => {
             <div className={styles.chartsGrid}>
               <div className={styles.chartContainer}>
                 <h4 className={styles.chartTitle}>Line Trend</h4>
+                <ResponsiveContainer width="100%" height={280}>
+                  <LineChart
+                    data={chartData}
+                    margin={{ top: 16, right: 18, left: 8, bottom: 12 }}
+                  >
+                    <CartesianGrid stroke="#eeeeee" strokeDasharray="3 3" />
+                    <XAxis dataKey="label" padding={{ left: 10, right: 10 }} />
+                    <YAxis allowDecimals={false} />
+                    <Tooltip labelFormatter={tooltipLabelFormatter} />
+                    <Line
+                      type="monotone"
+                      dataKey="alerts"
+                      stroke="#a30000"
+                      strokeWidth={3}
+                      dot={{ r: 3 }}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
 
-                <div className={styles.chartScroll}>
-                  <div className={styles.chartInner}>
-                    <ResponsiveContainer width="100%" height={220}>
-                      <LineChart
-                        data={chartData}
-                        margin={{ top: 16, right: 20, left: 0, bottom: 12 }}
-                      >
-                        <CartesianGrid stroke="#eeeeee" strokeDasharray="3 3" />
-                        <XAxis dataKey="label" padding={{ left: 10, right: 10 }} />
-                        <YAxis allowDecimals={false} />
-                        <Tooltip labelFormatter={tooltipLabelFormatter} />
-                        <Line
-                          type="monotone"
-                          dataKey="alerts"
-                          stroke="#a30000"
-                          strokeWidth={3}
-                          dot={{ r: 3 }}
-                        />
-                      </LineChart>
-                    </ResponsiveContainer>
-                  </div>
-                </div>
+              <div className={styles.chartContainer}>
+                <h4 className={styles.chartTitle}>Bar Trend</h4>
+                <ResponsiveContainer width="100%" height={280}>
+                  <BarChart
+                    data={chartData}
+                    margin={{ top: 16, right: 18, left: 8, bottom: 12 }}
+                  >
+                    <CartesianGrid stroke="#eeeeee" strokeDasharray="3 3" />
+                    <XAxis dataKey="label" padding={{ left: 10, right: 10 }} />
+                    <YAxis allowDecimals={false} />
+                    <Tooltip labelFormatter={tooltipLabelFormatter} />
+                    <Bar dataKey="alerts" fill="#2563eb" radius={[6, 6, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
               </div>
             </div>
-          </div>
 
+            <div className={styles.analyticsActions}>
+              <button className={styles.downloadBtn} onClick={downloadChartData}>
+                Download Data
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </div>
