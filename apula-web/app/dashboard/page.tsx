@@ -347,8 +347,39 @@ const AdminDashboard = () => {
               </div>
               <span className={styles.cardLabel}>Active Fire Incidents</span>
             </div>
+            
+            
 
             <div className={styles.cardSuccess}>
+              <div className={styles.cardTop}>
+                <FaCheckCircle className={styles.cardIcon} />
+                <p className={styles.bigNumber}>{resolvedTodayCount}</p>
+              </div>
+              <span className={styles.cardLabel}>Resolved Fire Incidents (Today)</span>
+            </div>
+
+          <div className={styles.cardInfo}>
+              <div className={styles.cardTop}>
+                <FaUserClock className={styles.cardIcon} />
+                <p className={styles.bigNumber}>{dispatchedResponders}</p>
+              </div>
+              <span className={styles.cardLabel}>Dispatched Responders</span>
+            </div>
+
+            
+          </div>
+
+          {/* ROW 2 */}
+          <div className={styles.row}>
+            <div className={styles.card}>
+              <div className={styles.cardTop}>
+                <FaUserCheck className={styles.cardIcon} />
+                <p className={styles.bigNumber}>{availableResponders}</p>
+              </div>
+              <span className={styles.cardLabel}>Responders Available</span>
+            </div>
+
+              <div className={styles.card}>
               <div className={styles.cardTop}>
                 <FaUsers className={styles.cardIcon} />
                 <p className={styles.bigNumber}>{availableTeams}</p>

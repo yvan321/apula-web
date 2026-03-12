@@ -111,12 +111,22 @@ export default function TeamVehiclePage() {
   // Create team (defaults to Available)
   // ------------------------------------------
  const createTeam = async () => {
-  if (!newTeamName.trim()) return alert("Please enter team name");
-  if (!selectedLeader) return alert("Please select a leader");
+  if (!newTeamName.trim()) {
+  setErrorMessage("Please enter team name.");
+  return;
+}
+
+if (!selectedLeader) {
+  setErrorMessage("Please select a leader.");
+  return;
+}
 
   try {
     const leader = responders.find((r) => r.id === selectedLeader);
-    if (!leader) return alert("Leader not found");
+    if (!leader) {
+      setErrorMessage("Selected leader not found.");
+      return;
+    }
 
     const batch = writeBatch(db);
 
@@ -157,7 +167,7 @@ export default function TeamVehiclePage() {
     setSuccessMessage("Team created successfully.");
   } catch (err) {
     console.error(err);
-    alert("Error creating team");
+    setErrorMessage("Error creating team.");
   }
 };
 
@@ -166,9 +176,20 @@ export default function TeamVehiclePage() {
   // Create vehicle
   // ------------------------------------------
   const createVehicle = async () => {
-    if (!vehicleCode.trim()) return alert("Enter vehicle code");
-    if (!vehiclePlate.trim()) return alert("Enter plate number");
-    if (!vehicleTeam.trim()) return alert("Select assigned team");
+  if (!vehicleCode.trim()) {
+  setErrorMessage("Please enter vehicle code.");
+  return;
+}
+
+if (!vehiclePlate.trim()) {
+  setErrorMessage("Please enter plate number.");
+  return;
+}
+
+if (!vehicleTeam.trim()) {
+  setErrorMessage("Please select an assigned team.");
+  return;
+}
 
     try {
       // store assignedTeamName for easy queries/display
@@ -189,7 +210,7 @@ export default function TeamVehiclePage() {
       setSuccessMessage("Vehicle added successfully.");
     } catch (err) {
       console.error(err);
-      alert("Error adding vehicle");
+      setErrorMessage("Error adding vehicle.");
     }
   };
 
@@ -268,7 +289,7 @@ export default function TeamVehiclePage() {
     setSuccessMessage("Team updated successfully.");
   } catch (err) {
     console.error(err);
-    alert("Error updating team");
+    setErrorMessage("Error updating team.");
   }
 };
 
@@ -303,7 +324,7 @@ const [confirmDelete, setConfirmDelete] = useState<{
       await batch.commit();
     } catch (err) {
       console.error(err);
-      alert("Error deleting team");
+      setErrorMessage("Error deleting team.");
     }
   };
 
@@ -363,7 +384,7 @@ const [confirmDelete, setConfirmDelete] = useState<{
     setSuccessMessage("Vehicle updated successfully.");
   } catch (err) {
     console.error(err);
-    alert("Failed to update vehicle");
+   setErrorMessage("Failed to update vehicle.");
   }
 };
 
@@ -396,7 +417,7 @@ const [confirmDelete, setConfirmDelete] = useState<{
       await batch.commit();
     } catch (err) {
       console.error(err);
-      alert("Error deleting vehicle");
+      setErrorMessage("Error deleting vehicle.");
     }
   };
 
@@ -412,7 +433,7 @@ await deleteVehicle(confirmDelete.id);
 setSuccessMessage("Vehicle deleted successfully.");
 }
 } catch (e) {
-alert("Delete failed. Check connection.");
+setErrorMessage("Delete failed. Check connection.");
 }
 
 setConfirmDelete(null);
@@ -421,6 +442,7 @@ setConfirmDelete(null);
 
 
 const [successMessage, setSuccessMessage] = useState<string | null>(null);
+const [errorMessage, setErrorMessage] = useState<string | null>(null);
   // ------------------------------------------
   // Render
   // ------------------------------------------
@@ -801,6 +823,28 @@ const [successMessage, setSuccessMessage] = useState<string | null>(null);
 </div>
 
 
+  </div>
+
+  
+)}
+{errorMessage && (
+  <div className={styles.modalOverlay}>
+    <div className={styles.modalContent}>
+      <h3 className={styles.modalTitle}>Error</h3>
+
+      <p style={{ marginBottom: 20, textAlign: "center", color: "black" }}>
+        {errorMessage}
+      </p>
+
+      <div className={styles.modalActions}>
+        <button
+          className={styles.closeBtn}
+          onClick={() => setErrorMessage(null)}
+        >
+          Okay
+        </button>
+      </div>
+    </div>
   </div>
 )}
 

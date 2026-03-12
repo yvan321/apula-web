@@ -106,7 +106,7 @@ const ResponderRequestsPage = () => {
       );
     } catch (err) {
       console.error("Error updating:", err);
-      alert("Failed to update responder.");
+      setErrorMessage("Failed to update responder.");
     }
 
     setConfirmAction(null);
@@ -238,6 +238,38 @@ const ResponderRequestsPage = () => {
           </div>
         </div>
       )}
+
+      {successMessage && (
+  <div className={styles.modalOverlay}>
+    <div className={styles.confirmModal}>
+      <h3>Success</h3>
+      <p>{successMessage}</p>
+
+      <button
+        className={styles.acceptBtn}
+        onClick={() => setSuccessMessage(null)}
+      >
+        Okay
+      </button>
+    </div>
+  </div>
+)}
+
+{errorMessage && (
+  <div className={styles.modalOverlay}>
+    <div className={styles.confirmModal}>
+      <h3>Error</h3>
+      <p>{errorMessage}</p>
+
+      <button
+        className={styles.cancelBtn}
+        onClick={() => setErrorMessage(null)}
+      >
+        Close
+      </button>
+    </div>
+  </div>
+)}
     </div>
   );
 };
