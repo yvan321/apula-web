@@ -22,6 +22,7 @@ import {
 
 import { auth, db } from "@/lib/firebase";
 import { onAuthStateChanged, signOut } from "firebase/auth";
+import { clearSessionCookie } from "@/lib/session";
 import {
   doc,
   getDoc,
@@ -61,8 +62,12 @@ export default function AdminHeader() {
   };
 
   const handleLogout = async () => {
-    await signOut(auth);
-    window.location.href = "/login";
+    try {
+      await signOut(auth);
+    } finally {
+      clearSessionCookie();
+      window.location.replace("/login");
+    }
   };
 
   // 🔊 INITIALIZE LOOPING SOUND (GLOBAL)

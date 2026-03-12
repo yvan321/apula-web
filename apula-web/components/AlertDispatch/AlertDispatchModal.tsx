@@ -77,6 +77,39 @@ const AlertDispatchModal = () => {
     ];
   };
 
+  const normalizeBase64Snapshot = (value: unknown): string | null => {
+    if (typeof value !== "string") return null;
+
+    const trimmed = value.trim();
+    if (!trimmed) return null;
+
+    if (trimmed.startsWith("data:image")) {
+      return trimmed;
+    }
+
+    const clean = trimmed.replace(/\s/g, "");
+    if (!clean) return null;
+
+    let mime = "image/jpeg";
+    if (clean.startsWith("iVBOR")) mime = "image/png";
+    if (clean.startsWith("R0lGOD")) mime = "image/gif";
+    if (clean.startsWith("UklGR")) mime = "image/webp";
+
+    return `data:${mime};base64,${clean}`;
+  };
+
+  const buildSnapshotCandidates = (alertData: any): string[] => {
+    if (alertData?.snapshotUrl) {
+      return buildImageCandidates(alertData.snapshotUrl);
+    }
+
+    const base64Data =
+      normalizeBase64Snapshot(alertData?.snapshotBase64) ||
+      normalizeBase64Snapshot(alertData?.snapshot);
+
+    return base64Data ? [base64Data] : [];
+  };
+
 
   const viewDispatchInfo = async (teamName: string) => {
   const snap = await getDocs(
@@ -469,6 +502,7 @@ const getTeamStationName = (teamName: string) => {
         alertType: selectedAlert.type,
         alertLocation: selectedAlert.location,
         snapshotUrl: selectedAlert.snapshotUrl || null,
+        snapshotBase64: selectedAlert.snapshotBase64 || null,
 
         responders: selected.map((r) => {
           const teamName =
@@ -582,7 +616,9 @@ const getTeamStationName = (teamName: string) => {
     "No description provided.";
 
   const previewImageSrc =
-    previewImageCandidates[previewImageIndex] || previewAlert?.snapshotUrl || "";
+    previewImageCandidates[previewImageIndex] || "";
+
+  const hasPreviewImage = Boolean(previewImageSrc);
 
   return (
     <div className={styles.modalOverlay}>
@@ -621,13 +657,8 @@ const getTeamStationName = (teamName: string) => {
   <button
     className={styles.viewBtn}
     onClick={() => {
-      if (!a.snapshotUrl) {
-        alert("No snapshot available.");
-        return;
-      }
-
       setPreviewAlert(a);
-      const candidates = buildImageCandidates(a.snapshotUrl);
+      const candidates = buildSnapshotCandidates(a);
       setPreviewImageCandidates(candidates);
       setPreviewImageIndex(0);
       setPreviewImageFailed(false);
@@ -795,19 +826,23 @@ const getTeamStationName = (teamName: string) => {
 
             <div className={styles.alertVisualGrid}>
               <div className={styles.alertPreviewImageWrap}>
-                <img
-                  src={previewImageSrc}
-                  alt="Alert snapshot"
-                  className={styles.alertPreviewImage}
-                  onLoad={() => setPreviewImageFailed(false)}
-                  onError={() => {
-                    if (previewImageIndex < previewImageCandidates.length - 1) {
-                      setPreviewImageIndex((prev) => prev + 1);
-                    } else {
-                      setPreviewImageFailed(true);
-                    }
-                  }}
-                />
+                {hasPreviewImage ? (
+                  <img
+                    src={previewImageSrc}
+                    alt="Alert snapshot"
+                    className={styles.alertPreviewImage}
+                    onLoad={() => setPreviewImageFailed(false)}
+                    onError={() => {
+                      if (previewImageIndex < previewImageCandidates.length - 1) {
+                        setPreviewImageIndex((prev) => prev + 1);
+                      } else {
+                        setPreviewImageFailed(true);
+                      }
+                    }}
+                  />
+                ) : (
+                  <p className={styles.alertMapEmpty}>No snapshot available for this alert.</p>
+                )}
               </div>
 
               <div className={styles.alertMapWrap}>
@@ -826,7 +861,7 @@ const getTeamStationName = (teamName: string) => {
               </div>
             </div>
 
-            {previewImageFailed && (
+            {hasPreviewImage && previewImageFailed && (
               <p>
                 Snapshot preview is blocked by file permissions. Set the Google Drive file to
                 <strong> Anyone with the link</strong> and try again.

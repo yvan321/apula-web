@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import styles from "./loginstyles.module.css";
 import Image from "next/image";
 import logo from "../../assets/fireapula.png";
@@ -12,6 +12,11 @@ import { auth, db } from "../../lib/firebase";
 import { doc, getDoc } from "firebase/firestore";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import {
+  createSessionPayload,
+  getSessionFromDocumentCookie,
+  setSessionCookie,
+} from "@/lib/session";
 
 export default function Login() {
   const [username, setUsername] = useState("");
@@ -19,6 +24,13 @@ export default function Login() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [resetLoading, setResetLoading] = useState(false);
+
+  useEffect(() => {
+    const session = getSessionFromDocumentCookie();
+    if (session) {
+      window.location.replace("/dashboard");
+    }
+  }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -47,10 +59,12 @@ export default function Login() {
       const userData = userDoc.data();
 
       // Allow admin or superadmin
-if (userData.role !== "admin" && userData.role !== "superadmin") {
-  await signOut(auth);
-  throw new Error("Access denied. Authorized personnel only.");
-}
+      if (userData.role !== "admin" && userData.role !== "superadmin") {
+        await signOut(auth);
+        throw new Error("Access denied. Authorized personnel only.");
+      }
+
+      setSessionCookie(createSessionPayload(user.uid, userData.role || "admin"));
 
 
       toast.success("Admin login successful!", {
@@ -60,7 +74,7 @@ if (userData.role !== "admin" && userData.role !== "superadmin") {
       });
 
       setTimeout(() => {
-        window.location.href = "/dashboard";
+        window.location.replace("/dashboard");
       }, 1500);
     } catch (err: any) {
       console.error(err);
