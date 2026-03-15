@@ -3,16 +3,33 @@ import { NextResponse } from "next/server";
 import admin from "firebase-admin";
 import { readFileSync } from "fs";
 
-if (!admin.apps.length) {
-  const path = process.env.GOOGLE_APPLICATION_CREDENTIALS;
-  const serviceAccount = JSON.parse(readFileSync(path!, "utf8"));
-  admin.initializeApp({
+function getAdminApp() {
+  if (admin.apps.length) return admin.app();
+
+  const serviceAccountPath = process.env.GOOGLE_APPLICATION_CREDENTIALS;
+  const serviceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT;
+
+  let serviceAccount;
+
+  if (serviceAccountJson) {
+    serviceAccount = JSON.parse(serviceAccountJson);
+  } else if (serviceAccountPath) {
+    serviceAccount = JSON.parse(readFileSync(serviceAccountPath, "utf8"));
+  } else {
+    throw new Error(
+      "Missing Firebase Admin credentials. Set GOOGLE_APPLICATION_CREDENTIALS or FIREBASE_SERVICE_ACCOUNT."
+    );
+  }
+
+  return admin.initializeApp({
     credential: admin.credential.cert(serviceAccount),
   });
 }
 
 export async function POST(req: Request) {
   try {
+    getAdminApp();
+
     const { email, password, name, contact, address, platform } = await req.json();
 
     if (!email || !password || !name || !contact || !address) {

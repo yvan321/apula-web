@@ -40,6 +40,8 @@ const ResponderRequestsPage = () => {
   const [responders, setResponders] = useState<Responder[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [confirmAction, setConfirmAction] = useState<ConfirmAction>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
     const loadResponders = async () => {
@@ -98,8 +100,7 @@ const ResponderRequestsPage = () => {
       }
 
       setResponders((prev) => prev.filter((r) => r.id !== responder.id));
-
-      alert(
+      setSuccessMessage(
         `${responder.name ?? "Responder"} has been ${
           action === "accept" ? "approved" : "declined"
         }.`

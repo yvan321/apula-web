@@ -1,15 +1,6 @@
 // /app/api/verify-otp/route.ts
 import { NextResponse } from "next/server";
-import admin from "firebase-admin";
 import { verifyOtp } from "../send-otp/route";
-
-if (!admin.apps.length) {
-  admin.initializeApp({
-    credential: admin.credential.cert(
-      JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT as string)
-    ),
-  });
-}
 
 export async function POST(req: Request) {
   try {

@@ -1,22 +1,5 @@
 import { NextResponse } from "next/server";
 import nodemailer from "nodemailer";
-import admin from "firebase-admin";
-import { readFileSync } from "fs";
-
-// ✅ Initialize Firebase Admin SDK using file path from .env
-if (!admin.apps.length) {
-  const serviceAccountPath = process.env.GOOGLE_APPLICATION_CREDENTIALS;
-
-  if (!serviceAccountPath) {
-    throw new Error("GOOGLE_APPLICATION_CREDENTIALS is not defined in .env");
-  }
-
-  const serviceAccount = JSON.parse(readFileSync(serviceAccountPath, "utf-8"));
-
-  admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount),
-  });
-}
 
 const otpStore = new Map<string, string>(); // temporary in-memory OTP storage
 
